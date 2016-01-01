@@ -1,0 +1,6 @@
+dl { float: left; padding-right: 50px; }
+dt { margin-right: 10px; }
+dd { margin-left: 5px; }
+
+dl.level2 { float: none; padding-right: 0px !important;}
+dl.level2 dd { float:left; }

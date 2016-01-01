@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block title %}Analyze results{% endblock %}
+{% block body %}
+<dl class=files>
+  <dt>Download:
+    {% for file in files %}
+    <dd><a href="{{ file[0] }}">{{ file[1] }}</a></dd>
+    {% endfor %}
+  </dt>
+</dl>
+<div class=viewer>
+</div>
+{% endblock %}

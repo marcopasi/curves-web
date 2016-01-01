@@ -1,0 +1,4 @@
+*.pyc
+*.bak
+instance/
+venv/

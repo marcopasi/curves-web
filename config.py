@@ -1,0 +1,5 @@
+#XXX licence
+DEBUG = True
+CURVESPLUS_HOME = "/home/p/src/curves"
+CURVESPLUS_EXE = CURVESPLUS_HOME+"/Cur+"
+MAX_CONTENT_LENGTH = 5 * 1024 * 1024
