@@ -1,10 +1,11 @@
 ### XXX license
 from flask.ext.wtf import Form
 from wtforms import Form as UnsecureForm
-from wtforms.fields import TextField, BooleanField, FileField, \
+from wtforms.fields import TextField, BooleanField, \
      RadioField, FloatField, FormField, FieldList
-from wtforms.validators import Required, Length, AnyOf, regexp, \
+from wtforms.validators import Required, Length, regexp, \
      ValidationError, StopValidation
+from flask.ext.wtf.file import FileRequired, FileAllowed, FileField
 import re
 
 from . import app
@@ -16,22 +17,6 @@ class Sequence(object):
     def __call__(self, form, field):
         if not self.sequence_re.match(field.data):
             raise ValidationError('Not a valid sequence: <%s>'%(field.data))
-
-
-class EitherRequired(Required):
-    """ Stop checking field if another field is not empty. """
-    def __init__(self, other_field_name, *args, **kwargs):
-        self.other_field_name = other_field_name
-        super(EitherRequired, self).__init__(*args, **kwargs)
-
-    def __call__(self, form, field):
-        assert self.other_field_name in form, \
-               'No such field %s.'%self.other_field_name
-        other_field = form[self.other_field_name]
-        if bool(other_field.data):
-            raise StopValidation() # no error message
-        super(EitherRequired, self).__call__(form, field)
-        
 
 
 #--- forms
@@ -49,8 +34,10 @@ class CurvesForm(Form):
     """ Form to describe a Curves+ run. """
     num_strands = 4
         
-    pdbfile = FileField('File', [EitherRequired("pdbid"), regexp('pdb$')])
-    pdbid = TextField('PDBid', [EitherRequired("pdbfile"), Length(min=4, max=4)])
+    # pdbfile = FileField('File', [Required()])
+    # pdbid = TextField('PDBid', [Required(), Length(min=4, max=4)])
+    pdbfile = FileField('File')
+    pdbid = TextField('PDBid')
 
     strands = FieldList(FormField(StrandForm), min_entries=num_strands)
 
@@ -66,9 +53,10 @@ class CurvesForm(Form):
     wback = FloatField('Wback', [Required()])
     wbase = FloatField('Wbase', [Required()])
 
-    # def validate_pdbfile(self, field):
-    #     if len(self.pdbfile.data) == 0 and len(self.pdbid.data) == 0:
-    #         raise ValidationError('Must specify either PDB File of PDBid')
+    def validate_pdbfile(self, field):
+        app.logger.info("PDB <"+self.pdbfile.data+"> ID<"+self.pdbid.data+">")
+        # if len(self.pdbfile.data) == 0 and len(self.pdbid.data) == 0:
+        #     raise ValidationError('Must specify either PDB File of PDBid')
     
     # validate_pdbid = validate_pdbfile
 

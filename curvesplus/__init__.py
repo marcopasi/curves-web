@@ -9,6 +9,7 @@ from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 from flask.ext.uploads import UploadSet
 from flask_debugtoolbar import DebugToolbarExtension
+from flask_bootstrap import Bootstrap
 
 import os
 import libcurves
@@ -18,6 +19,7 @@ import libcurves
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
 app.config.from_pyfile('config.py')
+Bootstrap(app)
 ## app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 pdbs = UploadSet('pdb')
 toolbar = DebugToolbarExtension(app)
@@ -47,18 +49,22 @@ def teardown_request(exception):
 def analyse():
     #TODO: plots
     #TODO: 3D
+    app.logger.info(request.files)
     configuration = CurvesConfiguration()
     form = None
     if len(request.form) == 0:
         form = CurvesForm(obj=configuration)
     else:
         form = CurvesForm(request.form)
-
-    if request.method == 'POST' and form.validate_on_submit():
+        q()
+        
+    if request.method == 'POST' and form.validate():
         form.populate_obj(configuration)
         if 'pdbfile' in request.files:
+            app.logger.info("Found PDB file")
             pdbfilename = pdbs.save(request.files['pdbfile'])
         else:
+            app.logger.info("Downloading PDB ID")
             pdbfilename = download_pdb(configuration.pdbid)
 
         curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
@@ -80,6 +86,7 @@ def analyse():
             
         if len(message):
             flash(message)
+            app.logger.info("FLASH: <%s>"%message)
         
         if retrun:
             session['lisfile'] = curvesrun.output_file(".lis")

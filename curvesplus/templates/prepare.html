@@ -19,7 +19,7 @@
   }
 </script>
 <a href="javascript: example_data();">example data</a> <br/>
-<form action="{{ url_for('analyse') }}" method=post class=prepare>
+<form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>
   <dl>
     <dd>{{ form.pdbfile.label }}: {{ form.pdbfile }}</dd>
     <dd>{{ form.pdbid.label }}: {{ form.pdbid(size=4) }}</dd>
