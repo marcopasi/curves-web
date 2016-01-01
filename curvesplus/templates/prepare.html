@@ -1,8 +1,10 @@
 {% extends "layout.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
 {% block subtitle %}Prepare and submit analysis{% endblock %}
 {% block curves %}
 {% if form.errors %}
-<ul class="errors">
+<ul class="error">
   {% for field_name, field_errors in form.errors|dictsort if field_errors %}
     {% for error in field_errors %}
   <li>{{ form[field_name].label }}: {{ error }}</li>
@@ -11,6 +13,48 @@
 </ul>
 {% endif %}
 
+<form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>
+  <dl>
+    <dd>{{ wtf.form_field(form.pdbfile) }}</dd>
+    <dd>{{ wtf.form_field(form.pdbid, size=4) }}</dd>
+    
+    <!-- strands -->
+    <dt>Nucleotides:</dt>
+    <dd>
+      <table class="nucleotides">
+	<tr>
+	  <th />
+	  <th>Subunits</th>
+	  <th>5'-3'</th>
+	  <th>3'-5'</th>
+	</tr>
+	{% for strand in form.strands %}
+	<tr>
+	  <td>Strand {{ loop.index }}:</td>
+	  <td>{{ strand.nucleotides(size=30, class='form-control') }}</td>
+	    {% for choice in strand.direction %}
+	    <td>{{ choice(class='form-control') }}</td>
+	    {% endfor %}
+	</tr>
+	{% endfor %}
+      </table>
+    </dd>
+  </dl>
+  
+  <!-- flags -->
+  <dl>
+    {% for field_name in form.boolean_fields %}
+    {% set field = form[field_name] %}
+    <dd>{{ wtf.form_field(field) }}</dd>
+    {% endfor %}
+    <dd>{{ wtf.form_field(form.back, size=4) }}</dd>
+    <dd>{{ wtf.form_field(form.wback, size=5) }}</dd>
+    <dd>{{ wtf.form_field(form.wbase, size=5) }}</dd>
+  </dl>
+
+  {{ form.csrf_token }}
+  <input type=submit value=Submit>
+</form>
 <script>
   function example_data() {
   document.getElementById("pdbid").value = "1BNA";
@@ -19,40 +63,5 @@
   }
 </script>
 <a href="javascript: example_data();">example data</a> <br/>
-<form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>
-  <dl>
-    <dd>{{ form.pdbfile.label }}: {{ form.pdbfile }}</dd>
-    <dd>{{ form.pdbid.label }}: {{ form.pdbid(size=4) }}</dd>
-    
-    <!-- strands -->
-    <dt>Nucleotides:</dt>
-    <dd>
-      <dl class=level2>
-	{% for strand in form.strands %}
-	<dt>Strand {{ loop.index }}:</dt>
-	<dd><dl class=level2>
-	    <dd>{{ strand.nucleotides(size=30) }}</dd>
-	    {% for choice in strand.direction %}
-	    <dd>{{ choice }}</dd>
-	    {% endfor %}
-	</dl></dd>
-	{% endfor %}
-      </dl>
-    </dd>
-  </dl>
-  
-  <!-- flags -->
-  <dl>
-    {% for field_name in form.boolean_fields %}
-    {% set field = form[field_name] %}
-    <dd>{{ field.label }}: {{ field() }}</dd>
-    {% endfor %}
-    <dd>{{ form.back.label }}: {{ form.back(size=4) }}</dd>
-    <dd>{{ form.wback.label }}: {{ form.wback(size=5) }}</dd>
-    <dd>{{ form.wbase.label }}: {{ form.wbase(size=5) }}</dd>
-  </dl>
 
-  {{ form.csrf_token }}
-  <input type=submit value=Submit>
-</form>
 {% endblock %}

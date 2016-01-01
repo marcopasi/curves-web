@@ -1,4 +1,5 @@
 {% extends "bootstrap/base.html" %}
+{% import "bootstrap/google.html" as google %}
 
 {% block styles %}
 {{super()}}
@@ -6,10 +7,13 @@
       href="{{url_for('.static', filename='style.css')}}">
 {% endblock %}
 
+{% block scripts %}
+{{super()}}
+{{google.uanalytics('UA-47865400-1')}}
+{% endblock %}
+
 {% block navbar %}
-<div class="navbar navbar-fixed-top">
-  <!-- ... -->
-</div>
+{{nav.navbar.render()}}
 {% endblock %}
 
 {% block content %}

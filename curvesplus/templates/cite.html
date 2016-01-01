@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block subtitle %}Citing Curves+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script type=text/javascript src="{{
+				  url_for('.static', filename='vendor/bibtex_js.js') }}"></script>
+<script type="text/javascript">
+      function bibtex_js_load(input, output, bibfile) {
+          input.load( bibfile, function() {
+              (new BibtexDisplay()).displayBibtex(input.val(), output);
+          });
+      }
+      $(document).ready( function() {
+          bibtex_js_load($("#bibtex_input"), $("#citecurves"), "static/citecurves.bib");
+          bibtex_js_load($("#bibtex_input"), $("#seealso"), "static/seealso.bib");
+      });
+</script>
+{% endblock %}
+
+{% block curves %}
+    <!---------->
+    <textarea id="bibtex_input"></textarea>
+    <!---->
+    <!--<div class="bibtex_template">-->
+            <li class="bibtex_template">
+              <span class="if author">
+                <span class="author"></span>.
+              </span>
+              <span class="title"></span>.
+              <span style="if journal">
+                <span class="journal"></span>,
+              </span>
+              <span class="if volume">
+                <span class="volume"></span>
+                <span class="if number">
+                  (<span class="number"></span>)
+                </span>
+                <span class="if pages">
+                  <span class="pages"></span>
+                </span>
+              </span>
+              <span class="if year">
+                (<span class="year"></span>).
+              </span>
+              <span class="if url">
+                <a class="url">(full text)</a>
+              </span>
+            </li>
+    <!--</div>    -->
+    <!---------->
+    <div id="citecurves"></div>
+    <h3>See also:</h3>
+  <div id="seealso"></div>
+{% endblock %}

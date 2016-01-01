@@ -1,6 +1,24 @@
-dl { float: left; padding-right: 50px; }
-dt { margin-right: 10px; }
-dd { margin-left: 5px; }
+body {font-size: large;}
 
-dl.level2 { float: none; padding-right: 0px !important;}
-dl.level2 dd { float:left; }
+form dl { float: left; padding-right: 50px; }
+form dt { margin-right: 10px; }
+form dd { margin-left: 5px; }
+.form-control {width: auto !important}
+
+.error          { background: #f0d6d6; padding: 0.5em; }
+h1 {}
+
+
+/* publication list */
+.volume { font-weight: bold; }
+.journal { font-style: italic; }
+ol.publist {
+    font-weight: bold;
+    color: #f00
+}
+ol.publist > li {
+    font-weight: normal;
+    color: #000;
+}
+#bibtex_input { display: none; }
+

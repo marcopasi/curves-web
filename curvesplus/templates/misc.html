@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block subtitle %}Programs and guides{% endblock %}
+
+{% block curves %}
+  <div class="row">
+    <div class="col-sm-6">
+  <h3>User guides:</h3>
+  <dl>
+    <dt>Curves+</dt>
+    <dd><a href="{{url_for('static', filename='doc/curves+.pdf')}}">Download</a></dd>
+    <dd><a href="{{url_for('static', filename='doc/curves+.html')}}">Visualise</a></dd>
+
+    <dt>Canal</dt>
+    <dd><a href="{{url_for('static', filename='doc/canal.pdf')}}">Download</a></dd>
+    <dd><a href="{{url_for('static', filename='doc/canal.html')}}">Visualise</a></dd>
+
+    <dt>Canion</dt>
+    <dd><a href="{{url_for('static', filename='doc/canion.pdf')}}">Download</a></dd>
+    <dd><a href="{{url_for('static', filename='doc/canion.html')}}">Visualise</a></dd>
+  </dl>
+  <br />
+
+  <h3>Fortran programs:</h3>
+  <dl>
+    <dt>Curves+</dt>
+    <dd><a href="{{url_for('static', filename='app/cur+_v2.8nc.tar.gz')}}">Download</a></dd>
+
+    <dt>Canal</dt>
+    <dd><a href="{{url_for('static', filename='app/canal.f')}}">Download</a></dd>
+
+    <dt>Canion</dt>
+    <dd><a href="{{url_for('static', filename='app/canion.f')}}">Download</a></dd>
+  </dl>    
+  
+</div>
+
+<div class="col-sm-6">
+  <dl>
+    <dt>Curves+</dt>
+    <dd>Conformational analysis of single nucleic acid
+    structures or of molecular dynamics (MD) trajectories</dd>
+    <br/>
+    <dt>Canal</dt>
+    <dd>Statistical analysis of nucleic conformational data from
+    MD trajectories produced by Curves+</dd>
+    <br/>
+    <dt>Canion</dt>
+    <dd>Analysis of ion/water/ligand distribution data from
+    MD trajectories produced by Curves+</dd>
+    <br/>
+    <dd><b>Note</b> that downloading and compiling Curves+ locally  will give you many more analysis possibilities than
+    those available via the web server.</dd>
+  </dl>
+</div>
+
+{% endblock %}

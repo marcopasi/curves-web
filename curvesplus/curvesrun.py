@@ -103,6 +103,7 @@ class CurvesRun(object):
         assert os.path.isfile(infile), "Input file doesn't exist <{}>".format(infile)
         self.outdir = outdir
         self.outfile = outfile
+        self.infile = infile_local_name
         infile_local = os.path.join(self.outdir, infile_local_name)
         assert not os.path.isfile(infile_local), "Output folder already contains an input file <{}>".format(infile_local)
         copy(infile, infile_local)
