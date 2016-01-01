@@ -7,7 +7,7 @@
 #
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
-from flask.ext.uploads import UploadSet
+from flask.ext.uploads import UploadSet, configure_uploads
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_bootstrap import Bootstrap
 
@@ -21,7 +21,9 @@ app.config.from_object('config')
 app.config.from_pyfile('config.py')
 Bootstrap(app)
 ## app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-pdbs = UploadSet('pdb')
+pdbfiles = UploadSet('pdbfiles', ('pdb',))
+app.config['UPLOADED_PDBFILES_DEST'] = app.static_folder
+configure_uploads(app, (pdbfiles,))
 toolbar = DebugToolbarExtension(app)
 
 from .util import download_pdb
@@ -44,28 +46,29 @@ def teardown_request(exception):
     """ Executed after request, even in case of exception. """
     pass
 
+#-----
 #@app.route('/analyse', methods=['GET','POST'])
 @app.route('/', methods=['GET','POST'])
 def analyse():
-    #TODO: plots
     #TODO: 3D
-    app.logger.info(request.files)
     configuration = CurvesConfiguration()
     form = None
     if len(request.form) == 0:
         form = CurvesForm(obj=configuration)
     else:
         form = CurvesForm(request.form)
-        q()
         
     if request.method == 'POST' and form.validate():
         form.populate_obj(configuration)
         if 'pdbfile' in request.files:
-            app.logger.info("Found PDB file")
-            pdbfilename = pdbs.save(request.files['pdbfile'])
+            app.logger.info("Saving PDB file")
+            basename = pdbfiles.save(request.files['pdbfile'])
+            pdbfilename = pdbfiles.path(basename)
         else:
             app.logger.info("Downloading PDB ID")
             pdbfilename = download_pdb(configuration.pdbid)
+
+        app.logger.info("PDB file: <%s>"%pdbfilename)
 
         curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
         retrun = curvesrun.run()      #XXX TODO: async
@@ -94,9 +97,12 @@ def analyse():
             session['outurl']  = curvesrun.urlbase
             files = [(curvesrun.output_url(ext),
                       curvesrun.outfile+ext) for ext in curvesrun.output_extensions]
+            files.insert(0, curvesrun.urlbase+"/input.pdb")
             return render_template('analyse.html', files=files)
     return render_template('prepare.html', form=form)
 
+
+#-----
 @app.route('/plot/<string:variable>', methods=['GET'])
 def plot(variable):
     message = ""

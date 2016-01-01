@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
-{% block title %}Prepare and submit analysis{% endblock %}
-{% block body %}
+{% block subtitle %}Prepare and submit analysis{% endblock %}
+{% block curves %}
 {% if form.errors %}
 <ul class="errors">
   {% for field_name, field_errors in form.errors|dictsort if field_errors %}
