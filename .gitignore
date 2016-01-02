@@ -1,4 +1,6 @@
 *.pyc
+*.py~
 *.bak
 instance/
 venv/
+test/
