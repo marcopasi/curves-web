@@ -19,10 +19,16 @@
 {% block content %}
 <h1>Curves+ web server</h1><h2>{% block subtitle %}{% endblock %}</h2>
 <div class=page>
-  {% for message in get_flashed_messages() %}
-    <div class=flash>{{ message }}</div>
-  {% endfor %}
-  {% block curves %}{% endblock %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <dl class=flashes>
+    {% for category, message in messages %}
+      <dd class="alert alert-{{ category }} alert-dismissible" role="alert">{{ message }}</dd>
+    {% endfor %}
+    </dl>
+  {% endif %}
+{% endwith %}
+{% block curves %}{% endblock %}
 </div>
 <!-- Footer -->
 <footer class="lopad">

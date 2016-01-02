@@ -54,9 +54,15 @@ class CurvesForm(Form):
     wbase = FloatField('Wbase', [Required()])
 
     def validate_pdbfile(self, field):
-        app.logger.info("PDB <"+self.pdbfile.data+"> ID<"+self.pdbid.data+">")
+        pass
+        # app.logger.info("PDB <"+self.pdbfile.data+"> ID<"+self.pdbid.data+">")
         # if len(self.pdbfile.data) == 0 and len(self.pdbid.data) == 0:
         #     raise ValidationError('Must specify either PDB File of PDBid')
     
-    # validate_pdbid = validate_pdbfile
+    validate_pdbid = validate_pdbfile
 
+    def validate_strands(self, field):
+        """ Accept if subunits are specified for any of the strands."""
+        if not reduce(lambda x,y: x or y, 
+            [len(entry.data['nucleotides']) > 0 for entry in field.entries]):
+            raise ValidationError('Must specify subunits for at least one strand.')

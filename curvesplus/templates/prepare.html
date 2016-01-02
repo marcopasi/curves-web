@@ -4,13 +4,13 @@
 {% block subtitle %}Prepare and submit analysis{% endblock %}
 {% block curves %}
 {% if form.errors %}
-<ul class="error">
-  {% for field_name, field_errors in form.errors|dictsort if field_errors %}
-    {% for error in field_errors %}
-  <li>{{ form[field_name].label }}: {{ error }}</li>
+  <dl class=errors>
+    {% for field_name, field_errors in form.errors|dictsort if field_errors %}
+      {% for error in field_errors %}
+    <dd class="alert alert-danger alert-dismissible" role="alert">{{ form[field_name].label }}: {{ error }}</dd>
+      {% endfor %}
     {% endfor %}
-  {% endfor %}
-</ul>
+  </dl>
 {% endif %}
 
 <form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>

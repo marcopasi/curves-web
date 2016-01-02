@@ -15,6 +15,8 @@ from flask_nav.elements import Navbar, View, Subgroup
 
 import os
 import libcurves
+import mimetypes
+mimetypes.add_type('text/plain', '.lis')
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
@@ -29,21 +31,21 @@ from .util import download_pdb
 from .forms import CurvesForm
 from .curvesrun import CurvesConfiguration, SubprocessCurvesRun
 
-# Backend actions around request
-@app.before_request
-def before_request():
-    """ Executed before request. """
-    pass
+## Backend actions around request
+# @app.before_request
+# def before_request():
+#     """ Executed before request. """
+#     pass
 
-@app.after_request
-def after_request(response):
-    """ Executed after request. """
-    return response
+# @app.after_request
+# def after_request(response):
+#     """ Executed after request. """
+#     return response
 
-@app.teardown_request
-def teardown_request(exception):
-    """ Executed after request, even in case of exception. """
-    pass
+# @app.teardown_request
+# def teardown_request(exception):
+#     """ Executed after request, even in case of exception. """
+#     pass
 
 
 #----- "static" routes
@@ -79,59 +81,68 @@ def analyse():
     else:
         form = CurvesForm(request.form)
 
-    if request.method == 'POST' and form.validate():
-        form.populate_obj(configuration)
-        #XXX Taken from flask-wtf.file.FileField.has_file():
-        #    is this sufficient to guarantee a valid file is available?
-        if 'pdbfile' in request.files and request.files['pdbfile'].filename not in [None, '', '<fdopen>']:
-            app.logger.info("Saving PDB file")
-            basename = pdbfiles.save(request.files['pdbfile'])
-            pdbfilename = pdbfiles.path(basename)
-        else:
-            app.logger.info("Downloading PDB ID")
-            pdbfilename = download_pdb(configuration.pdbid)
+    try:
+        if request.method == 'POST' and form.validate():
+            form.populate_obj(configuration)
+            #XXX Taken from flask-wtf.file.FileField.has_file():
+            #    is this sufficient to guarantee a valid file is available?
+            if 'pdbfile' in request.files and request.files['pdbfile'].filename not in [None, '', '<fdopen>']:
+                app.logger.info("Saving PDB file")
+                basename = pdbfiles.save(request.files['pdbfile'])
+                pdbfilename = pdbfiles.path(basename)
+            elif len(configuration.pdbid) == 4:
+                app.logger.info("Downloading PDB ID")
+                pdbfilename = download_pdb(configuration.pdbid)
+            else:
+                flash('ERROR: Must specify either a PDB File or a valid PDBid.', 'danger')
+                raise ValueError()
 
-        app.logger.info("PDB file: <%s>"%pdbfilename)
+            app.logger.info("PDB file: <%s>"%pdbfilename)
 
-        curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
-        retrun = curvesrun.run()      #XXX TODO: async
+            curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
+            retrun = curvesrun.run()      #XXX TODO: async
 
-        message=""
-        if not curvesrun.any_output():
-            """ if all output files aren't present, flash stderr """
-            message = "ERROR: No output files produced."
-            retrun = False
-        elif not curvesrun.all_outputs():
-            """ if any output file isn't present, flash stderr """
-            message = "WARNING: Some output files missing."
-        elif len(curvesrun.stderr):
-            message = "WARNING:"
-            
-        if len(curvesrun.stderr):
-            message +=" Curves+ said: '%s'"%(curvesrun.stderr)
-            
-        if len(message):
-            flash(message)
-            app.logger.info("FLASH: <%s>"%message)
-        
-        app.logger.info("Temp dir <%s>"%curvesrun.urlbase)
-        if retrun:
-            session['lisfile'] = curvesrun.output_file(".lis")
-            session['outdir']  = curvesrun.outdir
-            session['outurl']  = curvesrun.urlbase
-            files = [(curvesrun.output_url(ext),
-                      curvesrun.outfile+ext) for ext in curvesrun.output_extensions]
-            files.insert(0, (curvesrun.urlbase+"/"+curvesrun.infile, curvesrun.infile))
-            return render_template('analyse.html', files=files)
+            message=""
+            if len(curvesrun.stderr):
+                message =" Curves+ said: '%s'"%(curvesrun.stderr)
+
+            if not curvesrun.any_output():
+                """ if all output files aren't present, flash stderr and stop """
+                flash("ERROR: No output files produced. "+message, 'danger')
+                raise ValueError()
+            elif not curvesrun.all_outputs():
+                """ if any output file isn't present, flash stderr """
+                message = "WARNING: Some output files missing. "+message
+
+            if len(message):
+                flash(message, 'warning')
+                app.logger.info("FLASH: <%s>"%message)
+
+            app.logger.info("Temp dir <%s>"%curvesrun.urlbase)
+            if retrun:
+                session['lisfile'] = curvesrun.output_file(".lis")
+                session['outdir']  = curvesrun.outdir
+                session['outurl']  = curvesrun.urlbase
+                files = []
+                for ext in curvesrun.output_extensions:
+                    if not os.path.isfile(curvesrun.output_file(ext)): continue
+                    files.append((curvesrun.output_url(ext),
+                            curvesrun.outfile+ext))
+                files.insert(0, (curvesrun.urlbase+"/"+curvesrun.infile, curvesrun.infile))
+                return render_template('analyse.html', files=files)
+    except ValueError:
+        pass
+    except Exception:
+        flash("An error occured: Please try again.", 'danger')
     return render_template('prepare.html', form=form)
 
 
 #-----
 @app.route('/plot/<string:variable>', methods=['GET'])
 def plot(variable):
-    message = ""
     if variable is not None and not libcurves.Curves.is_variable(variable):
-        message = "Variable <%s> not recognised"%variable
+        #flash("Variable <%s> not recognised"%variable, 'danger')
+        return ""
 
     try:
         curves = libcurves.Curves(session['lisfile'])
@@ -145,8 +156,9 @@ def plot(variable):
         fig.savefig(filepath)
         return redirect(fileurl)
     except:
-        flash("ERROR: Couldn't produce plot.")
-        return analyse()
+        #flash("ERROR: Couldn't produce plot.", 'danger')
+        #return analyse()
+        return ""
 
 
 #-----

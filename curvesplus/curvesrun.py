@@ -124,7 +124,7 @@ class CurvesRun(object):
 
     def _check_outputs(self, op = lambda x,y: x or y):
         """ Check if output files exist. """
-        return reduce(lambda x,y: x or y, 
+        return reduce(op, 
             [os.path.isfile(output) for output in self.output_files()])
 
     def any_output(self):
