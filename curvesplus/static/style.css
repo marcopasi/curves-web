@@ -31,7 +31,7 @@ form dd { margin-left: 5px; }
 /* navbar */
 .navbar {background-color: #7a002f;}
 .navbar .container-fluid {margin-bottom: 5px; border-bottom: 1px solid white;
-			  margin-top: 5px; border-top: 1px solid white;}
+			    margin-top: 5px; border-top: 1px solid white;}
 .navbar-default .navbar-nav>li>a {color: #bbb;}
 .navbar-default .navbar-nav>li>a:hover {color: white;}
 .navbar-default .navbar-brand {color: white;}
@@ -41,6 +41,17 @@ form dd { margin-left: 5px; }
  .dropdown-menu>.active>a:focus,
  .dropdown-menu>.active>a:hover {background-color: #7a002f; }
 .navbar-default .dropdown-menu>.active>a:hover {color: white;}
+
+/* navbar: mobile */
+@media (max-width: 767px) {
+    .navbar-default .navbar-nav .open .dropdown-menu > li > a {
+	color: #bbb;
+    }
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+    color: #fff;
+  }
+}
 
 
 /* publication list */
