@@ -14,23 +14,26 @@
 {% endif %}
 
 <form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>
-  <dl>
+  <div class="row">
+    <div class="col-sm-6">
+      <dl>
     <dd>{{ wtf.form_field(form.pdbfile) }}</dd>
-    <dd>{{ wtf.form_field(form.pdbid, size=4) }}</dd>
+    <dd>or {{ wtf.form_field(form.pdbid, size=4) }}</dd>
     
     <!-- strands -->
+    <br/>
     <dt>Nucleotides:</dt>
     <dd>
       <table class="nucleotides">
 	<tr>
-	  <th />
+	  <th>Strand</th>
 	  <th>Subunits</th>
-	  <th>5'-3'</th>
-	  <th>3'-5'</th>
+	  <th>&nbsp;5'-3'</th>
+	  <th>&nbsp;3'-5'</th>
 	</tr>
 	{% for strand in form.strands %}
 	<tr>
-	  <td>Strand {{ loop.index }}:</td>
+	  <td>#{{ loop.index }}</td>
 	  <td>{{ strand.nucleotides(size=30, class='form-control') }}</td>
 	    {% for choice in strand.direction %}
 	    <td>{{ choice(class='form-control') }}</td>
@@ -40,7 +43,9 @@
       </table>
     </dd>
   </dl>
-  
+    </div>
+    <div class="col-sm-6">
+      <h4>Parameters</h4>
   <!-- flags -->
   <dl>
     {% for field_name in form.boolean_fields %}
@@ -51,15 +56,17 @@
     <dd>{{ wtf.form_field(form.wback, size=5) }}</dd>
     <dd>{{ wtf.form_field(form.wbase, size=5) }}</dd>
   </dl>
-
+    </div>
+  </div>
   {{ form.csrf_token }}
   <input type=submit value=Submit>
 </form>
+<br/>
 <script>
   function example_data() {
   document.getElementById("pdbid").value = "1BNA";
-  document.getElementById("strands-0-nucleotides").value = "1:6";
-  document.getElementById("strands-1-nucleotides").value = "24:19";
+  document.getElementById("strands-0-nucleotides").value = "1:12";
+  document.getElementById("strands-1-nucleotides").value = "24:13";
   }
 </script>
 <a href="javascript: example_data();">example data</a> <br/>

@@ -2,8 +2,16 @@
 {% block subtitle %}Backbone parameter guide{% endblock %}
 
 {% block curves %}
-<div style="float:left;width:60%"><img src="{{url_for('.static', filename='img/translation.png')}}"/></div>
-<div style=""><img src="{{url_for('.static', filename='img/rotation.png')}}"/></div>
+  <div class="row">
+    <div class="col-sm-6">
+      <h3>Translation</h3>
+      <img style="width:90%" src="{{url_for('.static', filename='img/translation.png')}}"/>
+    </div>
+    <div class="col-sm-6">
+      <h3>Rotation</h3>
+      <img style="width:85%" src="{{url_for('.static', filename='img/rotation.png')}}"/>
+    </div>
+  </div>
 <br/><br/>
-<div style="clear:both"> *all images are viewed from the minor groove and show the positive sense of each parameter </div>
+<div> *all images are viewed from the minor groove and show the positive sense of each parameter </div>
 {% endblock %}

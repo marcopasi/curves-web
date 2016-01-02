@@ -121,7 +121,7 @@ def analyse():
             session['outurl']  = curvesrun.urlbase
             files = [(curvesrun.output_url(ext),
                       curvesrun.outfile+ext) for ext in curvesrun.output_extensions]
-            files.insert(0, (curvesrun.urlbase+curvesrun.infile, curvesrun.infile))
+            files.insert(0, (curvesrun.urlbase+"/"+curvesrun.infile, curvesrun.infile))
             return render_template('analyse.html', files=files)
     return render_template('prepare.html', form=form)
 
@@ -137,6 +137,7 @@ def plot(variable):
         curves = libcurves.Curves(session['lisfile'])
         plot = curves.plot(variable)
         fig = plot[0].figure
+        fig.gca().grid()
         filename = variable+".png"
         filepath = os.path.join(session['outdir'], filename)
         fileurl  = "/"+session['outurl']+"/"+filename
@@ -145,7 +146,7 @@ def plot(variable):
         return redirect(fileurl)
     except:
         flash("ERROR: Couldn't produce plot.")
-        analyse()
+        return analyse()
 
 
 #-----

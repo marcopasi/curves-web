@@ -1,12 +1,49 @@
-body {font-size: large;}
+/* general */
+body {font-size: large; padding-left: 5px; pading-right:5px}
+h1 { color: #7a002f;}
+h2 { text-decoration: underline; }
+.lopad {font-size: small;}
 
+.error { background: #f0d6d6; padding: 0.5em; }
+
+
+/* form */
 form dl { float: left; padding-right: 50px; }
 form dt { margin-right: 10px; }
 form dd { margin-left: 5px; }
-.form-control {width: auto !important}
+.form-control {width: auto; display: inline;}
+.nucleotides {margin: 5px;}
+.nucleotides td {padding-left: 10px;}
+.nucleotides th {text-align: center;}
 
-.error          { background: #f0d6d6; padding: 0.5em; }
-h1 {}
+/* carousel */
+.carousel-caption {color: black; text-shadow: none}
+.ccontrol, .ccontrol:hover, .ccontrol:focus {
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:0;
+    width:15%;
+    font-size:20px;
+    color:black;
+    text-align:center;
+}
+.ccontrol.l {}
+.ccontrol.r {right:0; left:auto;}
+
+/* navbar */
+.navbar {background-color: #7a002f;}
+.navbar .container-fluid {margin-bottom: 5px; border-bottom: 1px solid white;
+			  margin-top: 5px; border-top: 1px solid white;}
+.navbar-default .navbar-nav>li>a {color: #bbb;}
+.navbar-default .navbar-nav>li>a:hover {color: white;}
+.navbar-default .navbar-brand {color: white;}
+.navbar-default .navbar-brand:focus,
+ .navbar-default .navbar-brand:hover {color: white;}
+.dropdown-menu>.active>a,
+ .dropdown-menu>.active>a:focus,
+ .dropdown-menu>.active>a:hover {background-color: #7a002f; }
+.navbar-default .dropdown-menu>.active>a:hover {color: white;}
 
 
 /* publication list */
