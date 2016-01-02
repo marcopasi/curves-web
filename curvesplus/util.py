@@ -12,7 +12,7 @@ def download_pdb(pdbid):
     url='http://www.rcsb.org/pdb/files/%s.pdb'%pdbid
     response = urlopen(url)
     pdbcontent = response.read()
-    pdbfile, pdbfilename = tempfile.mkstemp(suffix=".pdb")
-    os.write(pdbfile, pdbcontent)
+    pdbfile, pdbfilename = tempfile.mkstemp(suffix=".pdb") #, dir=app.static_folder)
+    siz = os.write(pdbfile, pdbcontent)
     os.close(pdbfile)
     return pdbfilename

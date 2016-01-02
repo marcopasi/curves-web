@@ -8,7 +8,6 @@
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 from flask.ext.uploads import UploadSet, configure_uploads
-from flask_debugtoolbar import DebugToolbarExtension
 from flask_bootstrap import Bootstrap, StaticCDN
 from flask_nav import Nav
 from flask_nav.elements import Navbar, View, Subgroup
@@ -27,6 +26,7 @@ Bootstrap(app)
 pdbfiles = UploadSet('pdbfiles', ('pdb',))
 app.config['UPLOADED_PDBFILES_DEST'] = app.static_folder
 configure_uploads(app, (pdbfiles,))
+#from flask_debugtoolbar import DebugToolbarExtension
 #toolbar = DebugToolbarExtension(app)
 
 from .util import download_pdb

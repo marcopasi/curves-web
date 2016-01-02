@@ -158,6 +158,8 @@ class SubprocessCurvesRun(CurvesRun):
             if os.path.isfile(output):
                 os.remove(output)
 
+        app.logger.info(self.config_string)
+
         cwd = os.getcwd()
         os.chdir(self.outdir)
         p = Popen([ self.executable ],
@@ -167,6 +169,7 @@ class SubprocessCurvesRun(CurvesRun):
         self.stdout = stdout
         self.stderr = stderr
         self.returncode = p.returncode
+        app.logger.info("Curves+: %s %s %d"%(stdout,stderr,p.returncode))
 
         os.chdir(cwd)
         if p.returncode == 0:

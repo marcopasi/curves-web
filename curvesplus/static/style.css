@@ -1,5 +1,5 @@
 /* general */
-body {font-size: large; padding-left: 5px; pading-right:5px}
+body {font-size: large; padding-left: 5px; padding-right: 5px; max-width: 940px; }
 h1 { color: #7a002f;}
 h2 { text-decoration: underline; }
 .lopad {font-size: small; margin-top: 25px;}

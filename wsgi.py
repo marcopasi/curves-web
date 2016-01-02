@@ -1,4 +1,5 @@
-from curvesplus import app
+from curvesplus import app as application
+#from hello import application
 
 if __name__ == "__main__":
-    app.run()
+    application.run()

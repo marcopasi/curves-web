@@ -1,5 +1,5 @@
-#XXX licence
-DEBUG = True
+#XXX license
+# DEBUG = True
 CURVESPLUS_HOME = "/home/p/src/curves"
 CURVESPLUS_EXE = CURVESPLUS_HOME+"/Cur+"
 MAX_CONTENT_LENGTH = 5 * 1024 * 1024
