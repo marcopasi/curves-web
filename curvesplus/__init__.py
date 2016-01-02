@@ -14,6 +14,7 @@ from flask_nav import Nav
 from flask_nav.elements import Navbar, View, Subgroup
 
 import os
+from zipfile import ZipFile
 import libcurves
 import mimetypes
 mimetypes.add_type('text/plain', '.lis')
@@ -26,7 +27,7 @@ Bootstrap(app)
 pdbfiles = UploadSet('pdbfiles', ('pdb',))
 app.config['UPLOADED_PDBFILES_DEST'] = app.static_folder
 configure_uploads(app, (pdbfiles,))
-toolbar = DebugToolbarExtension(app)
+#toolbar = DebugToolbarExtension(app)
 
 from .util import download_pdb
 from .forms import CurvesForm
@@ -125,20 +126,40 @@ def analyse():
                 session['outdir']  = curvesrun.outdir
                 session['outurl']  = curvesrun.urlbase
                 files = []
-                curvesrun.make_zip(curvesrun.outfile)
-                for ext in curvesrun.output_extensions+[".zip"]:
-                    print ext
-                    
+                extensions = []
+                for ext in curvesrun.output_extensions:
                     if not os.path.isfile(curvesrun.output_file(ext)): continue
-                    files.append((curvesrun.output_url(ext),
-                            curvesrun.outfile+ext))
-                files.insert(0, (curvesrun.urlbase+"/"+curvesrun.infile, curvesrun.infile))
+                    files.append(OutputFile(curvesrun.output_file(ext),
+                                            curvesrun.output_url(ext),
+                                            curvesrun.outfile+ext, ext))
+                files.insert(0, OutputFile(
+                    os.path.join(curvesrun.outdir, curvesrun.infile),
+                    curvesrun.urlbase+"/"+curvesrun.infile,
+                    curvesrun.infile, ".pdb"))
+                session['files'] = files
                 return render_template('analyse.html', files=files)
     except ValueError:
         pass
-    # except Exception as e:
-    #     flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
+    except Exception as e:
+        flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
     return render_template('prepare.html', form=form)
+
+def OutputFile(path, url, name, ext):
+    return dict(path = path,
+                url = url,
+                name = name,
+                extension = ext)
+
+
+#-----
+@app.route('/zip', methods=['GET'])
+def makezip(filename="output"):
+    filename = request.args.get("prefix", filename)
+    zipname = os.path.join(session['outdir'],filename+".zip")
+    with ZipFile(zipname, 'w') as outzip:
+        for output in session['files']:
+            outzip.write(output['path'], filename+output['extension'])
+    return redirect(session['outurl']+"/"+filename+".zip")
 
 
 #-----
@@ -156,7 +177,7 @@ def plot(variable):
         filename = variable+".png"
         filepath = os.path.join(session['outdir'], filename)
         fileurl  = "/"+session['outurl']+"/"+filename
-        app.logger.info(filepath+":"+fileurl)
+        #app.logger.info(filepath+":"+fileurl)
         fig.savefig(filepath)
         return redirect(fileurl)
     except:

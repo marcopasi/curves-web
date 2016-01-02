@@ -8,8 +8,15 @@
       <dt>View and Download files:</dt>
       <dd>(To download, right-click and select "Save as")</dd>
 	{% for file in files %}
-	<dd><a href="{{ file[0] }}">{{ file[1] }}</a></dd>
+	<dd><a href="{{ file['url'] }}">{{ file['name'] }}</a></dd>
 	{% endfor %}
+	<br/>
+      <dt>Download zip archive:</dt>
+      <dd>
+	<form action="{{ url_for('makezip') }}" method=get>
+	  <label for="prefix">file name:</label>
+	  <input id="prefix" type=text size=10 name="prefix" value="output" />
+	  &nbsp;<input type=submit value="Download zip" /></form></dd>
     </dl>
 
 <div id="plots" class="carousel" data-ride="carousel" data-interval="">
@@ -37,7 +44,7 @@
   <div class="col-md-7" style="border: 2px solid black;">
     <h3>3D Viewer</h3>
     <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
-    <br/><br/><br/><br/>
+    <br/><br/><br/><br/><br/><br/><br/>
   </div>
 </div>
 {% endblock %}
