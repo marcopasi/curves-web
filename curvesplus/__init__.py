@@ -17,6 +17,7 @@ import os
 import libcurves
 import mimetypes
 mimetypes.add_type('text/plain', '.lis')
+mimetypes.add_type('text/plain', '.pdb')
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
@@ -124,7 +125,10 @@ def analyse():
                 session['outdir']  = curvesrun.outdir
                 session['outurl']  = curvesrun.urlbase
                 files = []
-                for ext in curvesrun.output_extensions:
+                curvesrun.make_zip(curvesrun.outfile)
+                for ext in curvesrun.output_extensions+[".zip"]:
+                    print ext
+                    
                     if not os.path.isfile(curvesrun.output_file(ext)): continue
                     files.append((curvesrun.output_url(ext),
                             curvesrun.outfile+ext))
@@ -132,8 +136,8 @@ def analyse():
                 return render_template('analyse.html', files=files)
     except ValueError:
         pass
-    except Exception:
-        flash("An error occured: Please try again.", 'danger')
+    # except Exception as e:
+    #     flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
     return render_template('prepare.html', form=form)
 
 

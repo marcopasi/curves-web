@@ -2,6 +2,7 @@
 import re
 import os
 from shutil import copy
+from zipfile import ZipFile
 import tempfile
 
 from . import app
@@ -93,7 +94,7 @@ class CurvesConfiguration(object):
 class CurvesRun(object):
     """    
     """
-    output_extensions = ".lis .cda _X.pdb _B.pdb".split()
+    output_extensions = ".lis _X.pdb _B.pdb".split()
     
     def __init__(self, config, lib, exefile, infile, outdir, outfile="output", infile_local_name="input.pdb"):
         self.config = config
@@ -129,10 +130,18 @@ class CurvesRun(object):
 
     def any_output(self):
         return self._check_outputs()
-    
+
     def all_outputs(self):
         return self._check_outputs(op = lambda x,y: x and y)
-    
+
+    def make_zip(self, filename):
+        zipname = self.output_file(".zip")
+        with ZipFile(zipname, 'w') as outzip:
+            for ext in self.output_extensions:
+                output = self.output_file(ext)
+                outzip.write(output, filename+ext)
+        return zipname
+
     def run(self):
         pass
 
