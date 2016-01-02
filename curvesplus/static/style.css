@@ -14,7 +14,7 @@ form dd { margin-left: 5px; }
 .nucleotides th {text-align: center;}
 
 /* carousel */
-.carousel-caption {color: black; text-shadow: none}
+.carousel-caption {color: black; text-shadow: none; padding-bottom: 8%;}
 .ccontrol, .ccontrol:hover, .ccontrol:focus {
     position:absolute;
     top:0;
