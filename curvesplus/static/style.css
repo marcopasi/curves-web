@@ -12,6 +12,7 @@ form dd { margin-left: 5px; }
 .nucleotides {margin: 5px;}
 .nucleotides td {padding-left: 10px;}
 .nucleotides th {text-align: center;}
+input[type=radio] {height: auto;}
 
 /* carousel */
 .carousel-caption {color: black; text-shadow: none; padding-bottom: 8%;}

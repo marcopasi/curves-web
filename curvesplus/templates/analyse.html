@@ -23,7 +23,7 @@
   <!-- Wrapper for slides -->
   <div class="carousel-inner" role="listbox">
     {% for variable in "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
-    <div class="item {% if loop.index0 == 0 %} active {% endif %}">
+    <div class="item {% if variable == 'twist' %} active {% endif %}">
       <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
       <div class="carousel-caption">{{ variable|capitalize }}</div>
     </div>

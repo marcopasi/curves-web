@@ -193,14 +193,14 @@ nav = Nav()
 def navbar():
     return Navbar(
         'Curves+',
-        View('Home', 'analyse'),
+        View('Web server', 'analyse'),
         Subgroup(
             'Documentation',        
             View('User Instructions', 'instructions'),
             View('Helical parameter guide', 'helpar'),
             View('Backbone parameter guide', 'bbpar')),
         View('Citing Curves+', 'cite'),
-        View('Programs and guides', 'misc'))
+        View('Downloads', 'misc'))
 
 nav.init_app(app)
         
