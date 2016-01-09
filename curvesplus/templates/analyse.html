@@ -1,6 +1,21 @@
 {% extends "layout.html" %}
 {% block subtitle %}Analyze results{% endblock %}
 
+{% block scripts %}
+{{super()}}
+<script>
+  $("#plot_selector").change(function(){
+    /* Activate carousel on change */
+    var selected = $(this).children(":selected" )[0]; 
+    var slide_to = parseInt($(selected).attr("data-slide-to"));
+    var carousel_div = $(this).attr("data-target");
+    $(carousel_div).carousel(slide_to);
+});
+</script>
+{% endblock %}
+
+{% set variables = "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
+
 {% block curves %}
 <div class="row">
   <div class="col-md-5">
@@ -22,7 +37,7 @@
 <div id="plots" class="carousel" data-ride="carousel" data-interval="">
   <!-- Wrapper for slides -->
   <div class="carousel-inner" role="listbox">
-    {% for variable in "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
+    {% for variable in variables %}
     <div class="item {% if loop.index0 == 0 %} active {% endif %}">
       <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
       <div class="carousel-caption">{{ variable|capitalize }}</div>
@@ -31,6 +46,11 @@
   </div>
 
   <!-- Controls -->
+  <select id="plot_selector" class="ccontrol" data-target="#plots" style="left:50%">
+    {% for variable in variables %}
+      <option value="{{ variable }}" data-slide-to="{{ loop.index0 }}">{{ variable|capitalize }}</option>
+    {% endfor %}
+  </select>
   <a class="l ccontrol" href="#plots" role="button" data-slide="prev">
     <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
     <span class="sr-only">Previous</span>
