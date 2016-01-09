@@ -1,6 +1,28 @@
 {% extends "layout.html" %}
 {% block subtitle %}Analyze results{% endblock %}
 
+{% block scripts %}
+{{super()}}
+<script>
+  $("#plots_selector").change(function(){
+    /* Activate carousel on change */
+    var selected = $(this).children(":selected" )[0]; 
+    var slide_to = parseInt($(selected).attr("data-slide-to"));
+    var carousel_id = $(this).attr("data-target");
+    $(carousel_id).carousel(slide_to);
+});
+  $("#plots").on('slide.bs.carousel', function (e) {
+    /* Update select on carousel change */
+    var destination = $(e.relatedTarget).index();
+    var select = $("#plots_selector");
+    var option = select.children("[data-slide-to="+destination+"]")[0];
+    select.val(option.value);
+  });
+</script>
+{% endblock %}
+
+{% set variables = "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
+
 {% block curves %}
 <div class="row">
   <div class="col-md-5">
@@ -22,15 +44,20 @@
 <div id="plots" class="carousel" data-ride="carousel" data-interval="">
   <!-- Wrapper for slides -->
   <div class="carousel-inner" role="listbox">
-    {% for variable in "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
+    {% for variable in variables %}
     <div class="item {% if variable == 'twist' %} active {% endif %}">
       <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
-      <div class="carousel-caption">{{ variable|capitalize }}</div>
+      <!-- <div class="carousel-caption">{{ variable|capitalize }}</div> -->
     </div>
     {% endfor %}
   </div>
 
   <!-- Controls -->
+  <select id="plots_selector" class="ccontrol" data-target="#plots">
+    {% for variable in variables %}
+      <option value="{{ variable }}" data-slide-to="{{ loop.index0 }}" {% if variable == 'twist' %} selected {% endif %}>{{ variable|capitalize }}</option>
+    {% endfor %}
+  </select>
   <a class="l ccontrol" href="#plots" role="button" data-slide="prev">
     <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
     <span class="sr-only">Previous</span>
