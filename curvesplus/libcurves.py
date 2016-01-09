@@ -225,14 +225,16 @@ class Curves:
             plt.clf()
         # plot inter and backbone variables at junctions
         dx = 0.0
+        xlim = [min(x), max(x)]
         if varname in self.inter_bp_variables or varname in self.backbone_variables:
-            dx = -0.5 # XXX temporary hack
+            dx = 0.5
+            xlim[1] += 1
         plot = plt.plot(x.values+dx, y.values)
         # consider that grooves have 0.5 step
         if varname in self.groove_variables:
             x = [xx for xx in map(float, x) if xx == round(xx)]
         plt.xticks(x, seq.values)
-        plt.xlim([min(x), max(x)])
+        plt.xlim(xlim)
         plt.xlabel("Basepair")
         plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
         return plot

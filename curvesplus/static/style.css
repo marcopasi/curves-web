@@ -28,6 +28,12 @@ input[type=radio] {height: auto;}
 }
 .ccontrol.l {}
 .ccontrol.r {right:0; left:auto;}
+select.ccontrol, select.ccontrol:hover, select.ccontrol:focus {
+    left: 50%; 
+    width: auto;
+    transform: translate(-50%, 0);
+}
+
 
 /* navbar */
 .navbar {background-color: #7a002f;}
