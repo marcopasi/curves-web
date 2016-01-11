@@ -1,4 +1,13 @@
-# license
+# Copyright (C) 2015-2016 Marco Pasi <mf.pasi@gmail.com> 
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+"""
+CurvesRun: Configure and run Curves+.
+"""
 import re
 import os
 from shutil import copy
@@ -8,7 +17,7 @@ import tempfile
 from . import app
 
 class CurvesConfiguration(object):
-    """ """
+    """ Configuration of a Curves+ run. """
     pdbfile = ''
     pdbid = ''
     
@@ -92,7 +101,9 @@ class CurvesConfiguration(object):
            strand_string)
 
 class CurvesRun(object):
-    """    
+    """
+    Abstract Curves+ run. Subclass this to generate
+    useable classes by implementing the "run()" method.
     """
     output_extensions = ".lis _X.pdb _B.pdb".split()
     
@@ -139,9 +150,12 @@ class CurvesRun(object):
 
 class SubprocessCurvesRun(CurvesRun):
     """
-    Uses subprocess
-    Outdir is a tempfile in the static/
-    libfile and executable taken from configuration
+    Curves Run that uses Python's =subprocess=.
+    The output folder (=outdir=) is a tempfile (generated
+    using Python's =tempfile=) in the static/ folder of the
+    website. The location of the "libfile" and of the Curves+
+    executable are taken from configuration variables
+    CURVESPLUS_HOME and CURVESPLUS_EXE, respectively.
     """
     def __init__(self, config, infile):
         libbase = os.path.join(app.config["CURVESPLUS_HOME"], "standard")

@@ -4,6 +4,7 @@ h1 { color: #7a002f;}
 h2 { text-decoration: underline; }
 .lopad {font-size: small; margin-top: 25px;}
 
+
 /* form */
 form dl { float: left; padding-right: 50px; }
 form dt { margin-right: 10px; }
@@ -13,6 +14,7 @@ form dd { margin-left: 5px; }
 .nucleotides td {padding-left: 10px;}
 .nucleotides th {text-align: center;}
 input[type=radio] {height: auto;}
+
 
 /* carousel */
 .carousel-caption {color: black; text-shadow: none; padding-bottom: 8%;}
@@ -74,3 +76,12 @@ ol.publist > li {
 }
 #bibtex_input { display: none; }
 
+
+/* jmol */
+.controls {margin-top: 5px;}
+.controls label {margin-left: 1px;}
+.naradio {margin-left: 5%; font-size: 80%;}
+.colors {font-weight: 700; margin-bottom: 5px;}
+.cimg {display:inline-block; width: 25px; height: 25px;}
+.buttons > span {margin-top: 5px;}
+.helpline {font-size: small;}

@@ -125,17 +125,17 @@ def analyse():
                 session['lisfile'] = curvesrun.output_file(".lis")
                 session['outdir']  = curvesrun.outdir
                 session['outurl']  = curvesrun.urlbase
-                files = []
+                files = {}
                 extensions = []
                 for ext in curvesrun.output_extensions:
                     if not os.path.isfile(curvesrun.output_file(ext)): continue
-                    files.append(OutputFile(curvesrun.output_file(ext),
+                    files[ext] = OutputFile(curvesrun.output_file(ext),
                                             curvesrun.output_url(ext),
-                                            curvesrun.outfile+ext, ext))
-                files.insert(0, OutputFile(
+                                            curvesrun.outfile+ext, ext)
+                files["in"] = OutputFile(
                     os.path.join(curvesrun.outdir, curvesrun.infile),
                     curvesrun.urlbase+"/"+curvesrun.infile,
-                    curvesrun.infile, ".pdb"))
+                    curvesrun.infile, ".pdb")
                 session['files'] = files
                 return render_template('analyse.html', files=files)
     except ValueError:
