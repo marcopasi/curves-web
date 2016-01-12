@@ -15,8 +15,8 @@
 var JMOLPATH = "/static/media"; // path to the Jmol installation folder
 var LOADERIMG="/static/img/curves-loader.gif"; // path to ajax loader image
 
-var APPWIDTH= "90%";	  // !! modify .jmol width in style definition
-var APPHEIGHT= 300;
+var APPWIDTH= "95%";	  // !! modify .jmol width in style definition
+var APPHEIGHT= 400;
 
 /* PDB parsing SETTINGS */
 var BBRES = "BAC";

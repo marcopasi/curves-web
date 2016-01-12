@@ -75,7 +75,6 @@ def misc():
 #-----
 @app.route('/', methods=['GET','POST'])
 def analyse():
-    #TODO: 3D
     configuration = CurvesConfiguration()
     form = None
     if len(request.form) == 0:
@@ -86,19 +85,23 @@ def analyse():
     try:
         if request.method == 'POST' and form.validate():
             form.populate_obj(configuration)
+            jobname = None
             #XXX Taken from flask-wtf.file.FileField.has_file():
             #    is this sufficient to guarantee a valid file is available?
             if 'pdbfile' in request.files and request.files['pdbfile'].filename not in [None, '', '<fdopen>']:
                 app.logger.info("Saving PDB file")
                 basename = pdbfiles.save(request.files['pdbfile'])
                 pdbfilename = pdbfiles.path(basename)
+                jobname = request.files['pdbfile'].filename
             elif len(configuration.pdbid) == 4:
                 app.logger.info("Downloading PDB ID")
                 pdbfilename = download_pdb(configuration.pdbid)
+                jobname = configuration.pdbid
             else:
                 flash('ERROR: Must specify either a PDB File or a valid PDBid.', 'danger')
                 raise ValueError()
 
+            app.logger.info("JOB name: <%s>"%jobname)
             app.logger.info("PDB file: <%s>"%pdbfilename)
 
             curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
@@ -137,7 +140,7 @@ def analyse():
                     curvesrun.urlbase+"/"+curvesrun.infile,
                     curvesrun.infile, ".pdb")
                 session['files'] = files
-                return render_template('analyse.html', files=files)
+                return render_template('analyse.html', files=files, job=jobname)
     except ValueError:
         pass
     except Exception as e:

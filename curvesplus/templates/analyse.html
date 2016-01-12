@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-{% block subtitle %}Analyze results{% endblock %}
 
 {% block scripts %}
 {{super()}}
@@ -26,6 +25,7 @@
 {% block curves %}
 <div class="row">
   <div class="col-md-5">
+    <h2 class="top">Results: {{ job|truncate(12, True) }}</h2>
     <dl class=files>
       <dt>View and Download files:</dt>
       <dd>(To download, right-click and select "Save as")</dd>
