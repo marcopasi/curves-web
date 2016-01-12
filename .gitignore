@@ -4,3 +4,4 @@
 instance/
 venv/
 test/
+vendor/
