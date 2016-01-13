@@ -3,7 +3,7 @@ body {font-size: large; padding: 0 5px; }
 h1 { color: #7a002f;}
 h2 { text-decoration: underline; }
 .lopad {font-size: small; margin: 25px 0;}
-h2.top {margin: 0 auto;}
+h2.top {margin-top: 0;}
 
 /* form */
 form dl { float: left; padding-right: 50px; }
