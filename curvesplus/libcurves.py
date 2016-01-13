@@ -227,21 +227,21 @@ class Curves:
         start, end = self.normalize_interval(interval)
         
         y, x   = self.get_variable(varname, interval = interval)
-        seq = self.sequence[start:end:step]
         if not hold:
             plt.clf()
         # plot inter and backbone variables at junctions
         dx = 0.0
-        xlim = [min(x), max(x)]
         if varname in self.inter_bp_variables or varname in self.backbone_variables:
             dx = 0.5
-            xlim[1] += 1
         plot = plt.plot(x.values+dx, y.values)
         # consider that grooves have 0.5 step
         if varname in self.groove_variables:
-            x = [xx for xx in map(float, x) if xx == round(xx)]
-        plt.xticks(x, seq.values)
-        plt.xlim(xlim)
+            x = x[ x.apply(lambda x: x == round(x)) ].apply(int)
+        if dx > 0:
+            nx = len(x)
+            x.set_value(nx, 2*x.iloc[nx-1]-x.iloc[nx-2])
+        plt.xticks(x, self.sequence.values[x.values-1])
+        plt.xlim([min(x), max(x)])
         plt.xlabel("Basepair")
         plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
         return plot
