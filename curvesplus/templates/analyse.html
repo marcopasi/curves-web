@@ -20,7 +20,7 @@
 </script>
 {% endblock %}
 
-{% set variables = "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist".split() %}
+{% set variables = "shear stretch stagger buckle propeller opening shift slide rise tilt roll twist width0 width1".split() %}
 
 {% block curves %}
 <div class="row">
@@ -28,7 +28,7 @@
     <h2 class="top">Results: {{ job|truncate(16, True) }}</h2>
     <dl class=files>
       <dt>View and Download files:</dt>
-      <dd>(To download, right-click and select "Save as")</dd>
+      <p class=small>(To download, right-click then select "Save as")</p>
 	{% for file in files.values() %}
 	<dd><a href="{{ file['url'] }}">{{ file['name'] }}</a></dd>
 	{% endfor %}
