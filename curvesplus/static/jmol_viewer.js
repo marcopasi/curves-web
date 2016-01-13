@@ -12,7 +12,7 @@
   ****/
 
 /* GLOBAL SETTINGS */
-var JMOLPATH = "/static/media"; // path to the Jmol installation folder
+var JMOLPATH = "/static/vendor"; // path to the Jmol installation folder
 var LOADERIMG="/static/img/curves-loader.gif"; // path to ajax loader image
 
 var APPWIDTH= "95%";	  // !! modify .jmol width in style definition
@@ -26,7 +26,7 @@ var GRRES = "GRV";
 /* frame indexes */
 var axf = 1;
 var bbf = 2;
-var pdf = 3; // XXX must be last
+var pdf = 3; // must be last
 
 /* VISUALIZATION SETTINGS */
 // PDB: nucleic acid
@@ -50,9 +50,9 @@ var PDISPMODES = [
     "isosurface piso off;wireframe -"+pwf+";color "+plc+";",
     "wireframe off;cpk off;cartoon off; \
 if(piso){isosurface piso on;} else {\
-print 'isocreate';\
-frame last;isosurface piso solvent 1.4;color isosurface "+pisoc+";\
-frame all;piso=on;print 'isodone';};"];
+print 'isocreate';piso=on;\
+frame last;isosurface piso resolution 1 solvent 1.4;color isosurface "+pisoc+";\
+frame all;print 'isodone';};"];
 var PDISPNAMES = ["Cartoon", "Lines", "Surface"];
 // Display modes definition: protein
 var NDISPMODES = [
@@ -60,9 +60,9 @@ var NDISPMODES = [
     "isosurface niso off;wireframe -"+ncwf+"; cpk "+ncpk+";color "+nclc+";",
     "wireframe off;cpk off; \
 if(niso){isosurface niso on;} else {\
-print 'isocreate';\
-frame last;isosurface niso solvent 1.4;color isosurface "+nisoc+";\
-frame all;niso=on;print 'isodone';};"];
+print 'isocreate';niso=on;\
+frame last;isosurface niso resolution 1 solvent 1.4;color isosurface "+nisoc+";\
+frame all;print 'isodone';};"];
 var NDISPNAMES = ["Lines", "CPK", "Surface"];
 // colors
 var GRVCOLORS=["lawngreen", "orange", "pink", "silver"];
@@ -157,7 +157,8 @@ print \"loaddone\"; \
     jmolApplet([APPWIDTH, APPHEIGHT], loadstr);
 
     // show/hide models:
-    //jmolHtml("<div id=\"isoload\"><img class=\"loader\" src=\""+LOADERIMG+"\" />Generating...</div>");
+    jmolHtml("<div id=\"isoload\" class=\"load\"><img class=\"loader\" src=\""+LOADERIMG+"\" />Generating...</div>");
+    jmolHtml("<div id=\"load\" class=\"load\"><img class=\"loader\" src=\""+LOADERIMG+"\" />Initializing 3D viewer...</div>");
     jmolHtml("<div class=\"controls row\">");
     jmolHtml("<div class=\"lcontrols col-md-6\">");
     jmolHtml("<div id=\"nadisplay\"></div>"); // will contain disptk's for nucleic acid (_initPDB)
@@ -337,6 +338,7 @@ function _msg(el,msg) {		// messageCallback function
 	if(hasBB) {    // only init BB if the backbone file is present
 	    _initBB(chi.chaininfo);
 	}
+	document.getElementById("load").style.display = "none";
     } else if(msg.indexOf("isocreate") >= 0) { // start creating isosurface
 	document.getElementById("isoload").style.display = "block";
     }else if(msg.indexOf("isodone") >= 0) { // done creating isosurface
@@ -346,6 +348,11 @@ function _msg(el,msg) {		// messageCallback function
 }
 
 //---------------
+function _nashwrap(id, prep) {
+    if(NDISPNAMES[prep] == "Surface")
+        document.getElementById("isoload").style.display = "block";
+    setTimeout(function(){ _nash(id, 1); }, 10);
+}
 function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [and protein]
 
     var nacontrols = "";
@@ -358,13 +365,13 @@ function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [an
     pradio = [];
     for(var prep=0; prep<NDISPMODES.length; prep++) {
 	var checked = 0+(prep==(0+(!hasBB)));
-	pradio.push(["javascript _nash("+pdf+",1)", NDISPNAMES[prep], checked]);
+	pradio.push(["javascript _nashwrap("+pdf+","+prep+")", NDISPNAMES[prep], checked]);
     }
     nacontrols += jmolRadioGroup(pradio, null, "jmolRadioGroup"+naid+"disp")
     nacontrols += jmolHtml("</div></div>");
 
     // determine whether a protein is present
-    if(jmolGetPropertyAsArray("atomList","protein AND */"+pdf).length > 0) {
+    if(jmolGetPropertyAsArray("modelInfo","protein AND */"+pdf).models.length > 0) {
 	hasProtein=true;
 	// Protein
 	procontrols += jmolHtml("<div class=\"disptk\"><div class=\"nacheck\">");

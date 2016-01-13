@@ -81,8 +81,15 @@ ol.publist > li {
 .jmol div {margin: 0 auto;}
 .controls {margin-top: 5px;}
 .controls label {margin-left: 1px;}
-.naradio {margin-left: 5%; font-size: 80%;}
-.colors {font-weight: 700; margin-bottom: 5px;}
-.cimg {display:inline-block; width: 25px; height: 25px;}
+div.naradio {margin-left: 5%; font-size: 80%;}
+div.colors {font-weight: 700; margin: 5px 0;}
+.cimg {display:inline-block; width: 1.2em; height: 1.2em;}
 .buttons > span {margin-top: 5px;}
 .helpline {font-size: small;}
+div.load {position: absolute; top: 0; background: white; z-index: 10000; padding: 0.1em; }
+.loader {height: 1em; margin: 0 5px;}
+#isoload {display: none;}
+
+/* debug jmol *
+div[id*='_infotablediv'] { display: block; left: 550px;}
+/* */
