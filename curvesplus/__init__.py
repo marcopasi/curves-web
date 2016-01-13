@@ -170,7 +170,7 @@ def makezip(filename="output"):
 def plot(variable):
     if variable is not None and not libcurves.Curves.is_variable(variable):
         #flash("Variable <%s> not recognised"%variable, 'danger')
-        return ""
+        return "Variable <%s> not recognised"%variable
 
     try:
         curves = libcurves.Curves(session['lisfile'])
@@ -186,7 +186,10 @@ def plot(variable):
     except:
         #flash("ERROR: Couldn't produce plot.", 'danger')
         #return analyse()
-        return ""
+        if app.config["DEBUG"]:
+            import traceback
+            traceback.print_exc()
+        return "ERROR: Couldn't produce plot."
 
 
 #-----
