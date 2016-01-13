@@ -160,7 +160,7 @@ def makezip(filename="output"):
     filename = request.args.get("prefix", filename)
     zipname = os.path.join(session['outdir'],filename+".zip")
     with ZipFile(zipname, 'w') as outzip:
-        for output in session['files']:
+        for output in session['files'].itervalues():
             outzip.write(output['path'], filename+output['extension'])
     return redirect(session['outurl']+"/"+filename+".zip")
 
