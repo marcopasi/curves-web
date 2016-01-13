@@ -19,7 +19,9 @@
 {% endblock %}
 
 {% block content %}
-<h1>Curves+ web server</h1><h2>{% block subtitle %}{% endblock %}</h2>
+<h1>Curves+ web server</h1>
+<div class=container>
+<h2>{% block subtitle %}{% endblock %}</h2>
 <div class=page>
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
@@ -31,6 +33,7 @@
   {% endif %}
 {% endwith %}
 {% block curves %}{% endblock %}
+</div>
 </div>
 <!-- Footer -->
 <footer class="lopad">

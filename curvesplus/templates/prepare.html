@@ -15,7 +15,7 @@
 
 <form action="{{ url_for('analyse') }}" method=post class=prepare enctype=multipart/form-data>
   <div class="row">
-    <div class="col-sm-6">
+    <div class="col-sm-8">
       <dl>
     <dd>{{ wtf.form_field(form.pdbfile) }}</dd>
     <dd>or {{ wtf.form_field(form.pdbid, size=4) }}</dd>
@@ -44,7 +44,7 @@
     </dd>
   </dl>
     </div>
-    <div class="col-sm-6">
+    <div class="col-sm-4">
       <h4>Parameters</h4>
   <!-- flags -->
   <dl>
