@@ -16,6 +16,11 @@ from numpy import inf
 # 1) FileIntervals: rename, comment and add None as first condition to keep first section
 # 2) Curves: comment, cleanup, add (robuts) parsing of input parameters
 # 3) LisFile: add options to read header from section
+# 4) Curves: consider having explicitly 3+ series, interrelated:
+#    1. Levels   (integer index of level, first column in all stanzas)
+#    2. Seq  # (1 letter per level), Level direction (second, fourth column of bp_axis)
+#    3. Resn # (1 number per level), Level direction (third, fifth column of bp_axis)
+#    Where # indicates there is one series per strand.
 
 #----------------------------------------------------------------------------------
 class FileIntervals(file):
@@ -211,7 +216,7 @@ class Curves:
 
     @property
     def sequence(self):
-        return self.bp_axis.W
+        return pd.Series(self.bp_axis.W.values, index=self.bp_axis.Wn)
     @sequence.setter
     def sequence(self, sequence):
         raise NotImplementedError
@@ -234,13 +239,22 @@ class Curves:
         if varname in self.inter_bp_variables or varname in self.backbone_variables:
             dx = 0.5
         plot = plt.plot(x.values+dx, y.values)
+        if dx > 0:
+            # TODO: instead of extrapolating, get next value from bp_axis or intra_bp
+            nx = len(x)
+            nextx = 2*x.iloc[nx-1]-x.iloc[nx-2]
+            if nextx in self.bp_axis.Wn.values:
+                x.set_value(nx, nextx)
         # consider that grooves have 0.5 step
         if varname in self.groove_variables:
-            x = x[ x.apply(lambda x: x == round(x)) ].apply(int)
-        if dx > 0:
-            nx = len(x)
-            x.set_value(nx, 2*x.iloc[nx-1]-x.iloc[nx-2])
-        plt.xticks(x, self.sequence.values[x.values-1])
+            I = x.apply(lambda x: x == round(x))
+            x = x[I]
+            xnames = self.groove.Ln[I].values
+        else:
+            xnames = x.values
+        seq = self.sequence[xnames]
+        print x, xnames, seq
+        plt.xticks(x, seq)
         plt.xlim([min(x), max(x)])
         plt.xlabel("Basepair")
         plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
