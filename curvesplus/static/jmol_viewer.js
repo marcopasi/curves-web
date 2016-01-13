@@ -348,11 +348,21 @@ function _msg(el,msg) {		// messageCallback function
 }
 
 //---------------
-function _nashwrap(id, prep) {
+function _shwrap(prep, fun) {
     if(NDISPNAMES[prep] == "Surface")
         document.getElementById("isoload").style.display = "block";
-    setTimeout(function(){ _nash(id, 1); }, 10);
+    setTimeout(fun, 10);
+    return true;
 }
+function _nashwrap(id, prep) {
+    fun = function(){ _nash(id, 1); };
+    return _shwrap(prep, fun);
+}
+function _prshwrap(id, prep) {
+    fun = function(){ _prsh(id, 1); };
+    return _shwrap(prep, fun);
+}
+
 function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [and protein]
 
     var nacontrols = "";
@@ -380,7 +390,7 @@ function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [an
 	pradio = [];
 	for(var prep=0; prep<PDISPMODES.length; prep++) {
 	    var checked = 0;
-	    pradio.push(["javascript _prsh("+pdf+",1)", PDISPNAMES[prep], checked]);
+	    pradio.push(["javascript _prshwrap("+pdf+","+prep+")", PDISPNAMES[prep], checked]);
 	}
 	procontrols += jmolRadioGroup(pradio, null, "jmolRadioGroup"+prid+"disp")
 	procontrols += jmolHtml("</div></div>");
