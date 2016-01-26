@@ -15,9 +15,9 @@ from flask_nav.elements import Navbar, View, Subgroup
 import os
 from zipfile import ZipFile
 import libcurves
-import mimetypes
-mimetypes.add_type('text/plain', '.lis')
-mimetypes.add_type('text/plain', '.pdb')
+# import mimetypes
+# mimetypes.add_type('text/plain', '.lis')
+# mimetypes.add_type('text/plain', '.pdb')
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
