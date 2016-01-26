@@ -12,7 +12,7 @@ The Curves+ run configuration form.
 from flask.ext.wtf import Form
 from wtforms import Form as UnsecureForm
 from wtforms.fields import TextField, BooleanField, \
-     RadioField, FloatField, FormField, FieldList
+     RadioField, FloatField, FormField, FieldList, IntegerField
 from wtforms.validators import Required, Length, regexp, \
      ValidationError, StopValidation
 from flask.ext.wtf.file import FileRequired, FileAllowed, FileField
@@ -56,12 +56,13 @@ class CurvesForm(Form):
     line = BooleanField('Line')
     zaxe = BooleanField('Zaxe')
     refo = BooleanField('Refo')
-    test = BooleanField('Test')
-    boolean_fields = 'fit circ line zaxe refo test'.split()
+    #test = BooleanField('Test')
+    boolean_fields = 'fit circ line zaxe refo'.split()
 
     back  = TextField('Back',  [Required(), Length(min=1, max=64)])
     wback = FloatField('Wback', [Required()])
     wbase = FloatField('Wbase', [Required()])
+    naxlim = IntegerField('Naxlim', [Required()])
 
     def validate_pdbfile(self, field):
         pass

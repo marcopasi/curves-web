@@ -38,15 +38,14 @@ class CurvesConfiguration(object):
     line = False
     zaxe = False
     refo = False
-    test = False
+    #test = False
 
     back  = 'P'
     wback = 2.9
     wbase = 3.5
-
     naxlim = 3
 
-    _params = """fit circ line zaxe refo test 
+    _params = """fit circ line zaxe refo 
     back wback wbase 
     naxlim""".split()
         

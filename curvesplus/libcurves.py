@@ -253,7 +253,6 @@ class Curves:
         else:
             xnames = x.values
         seq = self.sequence[xnames]
-        print x, xnames, seq
         plt.xticks(x, seq)
         plt.xlim([min(x), max(x)])
         plt.xlabel("Basepair")
