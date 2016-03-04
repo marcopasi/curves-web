@@ -45,15 +45,21 @@ class CurvesConfiguration(object):
     wbase = 3.5
     naxlim = 3
 
+    "These parameters go in the namelist"
     _params = """fit circ line zaxe refo 
     back wback wbase 
     naxlim""".split()
-        
+
     def __init__(self, config={}, **kwargs):
+        """ Initialise the run with parameters.
+        Parameters can be specified both using the
+        =config= option (dict of parameters) or directly
+        in the constructor call."""
         self.update(config)
         self.update(kwargs)
 
     def update(self, dict_):
+        """Update the class with the specified parameters."""
         self.__dict__.update(dict_)
 
     @staticmethod
@@ -62,7 +68,9 @@ class CurvesConfiguration(object):
         return ".f."
     
     def _param_string(self, params):
-        """ Generate a valid namelist string for the specified parameters. """
+        """ Generate a valid Curves+ namelist string for
+        the specified parameters. The string can then be
+        passed to the Curves+ executable."""
         for param_name in params:
             value = getattr(self, param_name)
             if type(value) is bool:
@@ -70,7 +78,9 @@ class CurvesConfiguration(object):
             yield "{0}={1}".format(param_name, value)
 
     def _strand_string(self, strands):
-        """ Generate a valid strand specification string for the specified strands. """
+        """ Generate a valid strand specification string for
+        the specified strands. The string can then be passed
+        to the Curves+ executable."""
         strandlines = []
         directions = []
         for strand in strands:
@@ -86,7 +96,9 @@ class CurvesConfiguration(object):
         return [summaryline] + strandlines
 
     def string(self, infile, outfile, libprefix):
-        """ Generate the complete configuration string for a Curves+ run. """
+        """ Generate the complete configuration string for
+         a Curves+ run, by combining the namelist string and
+         the strand-specification string."""
         param_string = ", ".join(self._param_string(self._params))
         param_string = "\n".join(re.findall("(.{,64}(?:,|$))", param_string)[:-1])
         strand_string = "\n".join(self._strand_string(self.strands))
