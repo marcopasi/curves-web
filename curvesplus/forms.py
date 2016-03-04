@@ -59,6 +59,8 @@ class CurvesForm(Form):
     #test = BooleanField('Test')
     boolean_fields = 'fit circ line zaxe refo'.split()
 
+    viewer = BooleanField('3D Viewer')
+    
     back  = TextField('Back',  [Required(), Length(min=1, max=64)])
     wback = FloatField('Wback', [Required()])
     wbase = FloatField('Wbase', [Required()])

@@ -69,6 +69,7 @@
   </div>
   
   <div class="col-md-7">
+    {% if options['viewer'] %}
     <!-- Jmol for Curves+ -->
     <!-- version 1.3 -->
     <div class="jmol">
@@ -91,6 +92,7 @@
     <p>Jmol viewer: left-click to rotate, shift-left-click to zoom or z-rotate and ctrl-right-click to translate. See <a href="http://www.jmol.org">http://www.jmol.org/</a>.
     </p>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

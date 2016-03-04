@@ -71,20 +71,39 @@ def cite():
 def misc():
     return render_template('misc.html')
 
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('home.html')
 
 #-----
-@app.route('/', methods=['GET','POST'])
+class Options(object):
+    viewer = True
+    def update_from(self, _dict):
+        for key, value in _dict.iteritems():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+#-----
+@app.route('/analyse', methods=['GET','POST'])
 def analyse():
     configuration = CurvesConfiguration()
     form = None
-    if len(request.form) == 0:
-        form = CurvesForm(obj=configuration)
-    else:
-        form = CurvesForm(request.form)
+    form = CurvesForm(request.form, obj=configuration)
+    # if len(request.form) == 0:
+    #     form = CurvesForm(obj=configuration)
+    # else:
+    #     form = CurvesForm(request.form)
 
     try:
+        options = Options()
         if request.method == 'POST' and form.validate():
+            "Populate configuration with form entries."
             form.populate_obj(configuration)
+            "Take some form entries as options."
+            options.update_from(form.data)
+            app.logger.info("Options: %s"%options)
+            #assert 1==0
+            "Treat special case of input file"
             jobname = None
             #XXX Taken from flask-wtf.file.FileField.has_file():
             #    is this sufficient to guarantee a valid file is available?
@@ -140,10 +159,13 @@ def analyse():
                     curvesrun.urlbase+"/"+curvesrun.infile,
                     curvesrun.infile, ".pdb")
                 session['files'] = files
-                return render_template('analyse.html', files=files, job=jobname)
+                return render_template('analyse.html', files=files, job=jobname, options=options)
     except ValueError:
         pass
+    except AssertionError as e:
+        raise e
     except Exception as e:
+        raise e
         flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
     return render_template('prepare.html', form=form)
 
@@ -198,7 +220,7 @@ nav = Nav()
 @nav.navigation()
 def navbar():
     return Navbar(
-        'Curves+',
+        View('Curves+', 'home'),
         View('Web server', 'analyse'),
         Subgroup(
             'Documentation',        

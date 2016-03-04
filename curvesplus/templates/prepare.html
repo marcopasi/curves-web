@@ -60,16 +60,23 @@
     </div>
   </div>
   {{ form.csrf_token }}
+  {{ wtf.form_field(form.viewer) }}
   <input type=submit value=Submit>
 </form>
 <br/>
 <script>
-  function sample_data() {
+  function sample_data_1() {
   document.getElementById("pdbid").value = "1BNA";
   document.getElementById("strands-0-nucleotides").value = "1:12";
   document.getElementById("strands-1-nucleotides").value = "24:13";
   }
+  function sample_data_2() {
+  document.getElementById("pdbid").value = "1KX5";
+  document.getElementById("strands-0-nucleotides").value = "1:147";
+  document.getElementById("strands-1-nucleotides").value = "294:148";
+  }
 </script>
-<a href="javascript: sample_data();">sample data</a> <br/>
+<a href="javascript: sample_data_1();">sample data: Drew-Dickerson dodecamer</a> <br/>
+<a href="javascript: sample_data_2();">sample data: Nucleosome core particle</a> <br/>
 
 {% endblock %}
