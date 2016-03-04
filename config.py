@@ -1,4 +1,3 @@
-#XXX license
 # DEBUG = True
 CURVESPLUS_HOME = "/home/p/src/curves"
 CURVESPLUS_EXE = CURVESPLUS_HOME+"/Cur+"
