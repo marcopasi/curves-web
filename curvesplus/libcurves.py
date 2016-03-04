@@ -13,7 +13,7 @@ import pandas as pd
 from numpy import inf
 
 # TODO:
-# 1) FileIntervals: rename, comment and add None as first condition to keep first section
+# 1) FileIntervals: rename and comment
 # 2) Curves: comment, cleanup, add (robuts) parsing of input parameters
 # 3) LisFile: add options to read header from section
 # 4) Curves: consider having explicitly 3+ series, interrelated:
@@ -21,12 +21,21 @@ from numpy import inf
 #    2. Seq  # (1 letter per level), Level direction (second, fourth column of bp_axis)
 #    3. Resn # (1 number per level), Level direction (third, fifth column of bp_axis)
 #    Where # indicates there is one series per strand.
+# 5) LisFile: Define more robust parsing of nml entries.
 
 #----------------------------------------------------------------------------------
 class FileIntervals(file):
     """
     Raise stopIteration every time a condition is fulfilled.
-    First section is ignored, last section is returned.
+    Conditions are expressed in the form of strings, which 
+    must match at the beginning of the line (str.startswith).
+    First section is ignored, last section is returned. To
+    retain the first section, initialise with an empty string
+    as the first condition.
+
+    The sectioning feature of this class will work exclusively
+    when accessing data through iterator methods. The "read"
+    methods will work as usual (see file).
     """
     def __init__(self, conditions, start_deltas = [], *args, **kwargs):
         super(FileIntervals, self).__init__(*args, **kwargs)
@@ -43,17 +52,21 @@ class FileIntervals(file):
         self._stack = []
         # initialise to first condition
         self._ic = 0
-        
+
+    def match(self, line, index):
+        "Return true if the line matches the condition at index."
+        return line.startswith(self.conditions[index])
+
     def next(self):
         while True:
             if len(self._stack) > 0:
                 return self._stack.pop(0)
             line = super(FileIntervals, self).next()
             self._valid += 1
-            if self._ic < self._nc and line.startswith(self.conditions[self._ic]):
+            if self._ic < self._nc and self.match(line, self._ic):
                 delta = self.start_deltas[self._ic]
-                exvalid, self._valid = self._valid, -delta
                 self._ic += 1
+                exvalid, self._valid = self._valid, -delta
                 if exvalid >= 0:
                     if delta == 0:
                         self._stack.append(line)
@@ -72,15 +85,48 @@ class LisFile(FileIntervals):
         """ Read a section of the lis file with uniform fixed-width formatting
         in a pd.DataFrame. """
         return pd.read_fwf(self, header=None, skiprows=header, skipfooter=footer,
-                            widths = widths, usecols = usecols, names = names)
+                            widths = widths, usecols = usecols, names = names,
+                            na_values=["---", "----"])
+
+    def read_nml(self, line, keylen=7, valuelen=32, initspace=2):
+        """
+        Read nml lines of a lis file.
+
+        Default line type is char, as defined in Curves+ (v2.8).
+        Other types are defined as (in Curves+ v2.8):
+        
+        | Type  | keylen | valuelen |
+        |-------+--------+----------|
+        | char  | 7      | 32       |
+        | int   | 7      | 6        |
+        | float | 7      | 6        |
+        | bool  | 7      | 6        |
+        
+        N.B.: Keylen includes ":".
+        """
+        ret = {}
+
+        def _consume(s,a,b):
+            return s[b:], s[a:b]
+        
+        while len(line) > 0:
+            line, key  = _consume(line, initspace, initspace+keylen)
+            line, value= _consume(line, 0, valuelen)
+            key = key.strip()
+            if ret.has_key(key):
+                raise ValueError("NML Error: Duplicate configuration entry %s."%key)
+            ret[key] = value.strip()
+        return ret
 
 #----------------------------------------------------------------------------------
-class Curves:
+class Curves(object):
     """
     """
-    section_headers = ["  (A) BP-Axis", "  (B) Intra-BP parameters", 
-                       "  (C) Inter-BP", "  (D) Backbone Parameters",
-                       "  (E) Groove parameters", "  (I) " ]
+    section_headers = [
+        "",
+        "  (A) BP-Axis", "  (B) Intra-BP parameters", 
+        "  (C) Inter-BP", "  (D) Backbone Parameters",
+        "  (E) Groove parameters", "  (I) " ]
     bp_axis_variables = "xdisp ydisp inclin tip ax-bend".split()
     intra_bp_variables= "shear stretch stagger buckle propeller opening".split()
     inter_bp_variables= "shift slide rise tilt roll twist h-rise h-twist".split()
@@ -109,8 +155,14 @@ class Curves:
     def __init__(self, filename):
         self.lisfile = LisFile(name = filename, conditions = self.section_headers)
         self._parse_lis()
+        self.lisfile.close()
 
     def _parse_lis(self):
+        """
+        Read all sections of the lis file, using =section_headers=
+        to define sections.
+        """
+        self.header = self._read_header()
         self.bp_axis = self._read_bp_axis()
         self.nbp = len(self.bp_axis)
         self.intra_bp = self._read_intrabp()
@@ -118,6 +170,23 @@ class Curves:
         self.backbone = self._read_bckbone()
         self.groove   = self._read_groove()
 
+    def _read_header(self):
+        """
+        Read the Lis file header to get run parameters.
+        
+        These information are contained between two pairs of
+        newlines.
+        """
+        newlines = 0
+        parsing  = False
+        for line in self.lisfile: # first section
+            if len(line.strip()) == 0: # newline
+                newlines += 1
+            if newlines == 2:
+                if parsing:
+                    break
+                parsing = True
+        
     def _read_bp_axis(self): 
         #   (A) BP-Axis        Xdisp   Ydisp   Inclin    Tip  Ax-bend
         #
@@ -253,9 +322,13 @@ class Curves:
         else:
             xnames = x.values
         seq = self.sequence[xnames]
-        plt.xticks(x, seq)
+        if len(x) <= 20:
+            plt.xticks(x, seq)
         plt.xlim([min(x), max(x)])
-        plt.xlabel("Basepair")
+        if varname in self.groove_variables:
+            plt.xlabel("Level")
+        else:
+            plt.xlabel("Basepair")
         plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
         return plot
                     
