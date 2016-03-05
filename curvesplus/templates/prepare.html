@@ -71,12 +71,18 @@
   document.getElementById("strands-1-nucleotides").value = "24:13";
   }
   function sample_data_2() {
+  document.getElementById("pdbid").value = "1CDW";
+  document.getElementById("strands-0-nucleotides").value = "1:16";
+  document.getElementById("strands-1-nucleotides").value = "32:17";
+  }
+  function sample_data_3() {
   document.getElementById("pdbid").value = "1KX5";
   document.getElementById("strands-0-nucleotides").value = "1:147";
   document.getElementById("strands-1-nucleotides").value = "294:148";
   }
 </script>
 <a href="javascript: sample_data_1();">sample data: Drew-Dickerson dodecamer</a> <br/>
-<a href="javascript: sample_data_2();">sample data: Nucleosome core particle</a> <br/>
+<a href="javascript: sample_data_2();">sample data: TATA-binding protein core domain</a> <br/>
+<a href="javascript: sample_data_3();">sample data: Nucleosome core particle</a> <br/>
 
 {% endblock %}
