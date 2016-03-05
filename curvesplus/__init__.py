@@ -77,11 +77,19 @@ def home():
 
 #-----
 class Options(object):
+    """Contains information the "analyse" template
+    expects to find in order to decide how to output."""
     viewer = True
     def update_from(self, _dict):
         for key, value in _dict.iteritems():
             if hasattr(self, key):
                 setattr(self, key, value)
+    
+    def __str__(self):
+        return ", ".join(
+            [ "%s: %s"%(attr, getattr(self, attr))
+               for attr in dir(self)
+            if not attr.startswith('__') and not callable(getattr(self,attr))])
 
 #-----
 @app.route('/analyse', methods=['GET','POST'])
@@ -101,7 +109,7 @@ def analyse():
             form.populate_obj(configuration)
             "Take some form entries as options."
             options.update_from(form.data)
-            app.logger.info("Options: %s"%options)
+            app.logger.info("Options: <%s>"%options)
             #assert 1==0
             "Treat special case of input file"
             jobname = None
