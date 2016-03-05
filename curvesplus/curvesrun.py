@@ -10,14 +10,45 @@ CurvesRun: Configure and run Curves+.
 """
 import re
 import os
-from shutil import copy
+from shutil import copy as shell_copy
 from zipfile import ZipFile
 import tempfile
 
 from . import app
 
-class CurvesConfiguration(object):
-    """ Configuration of a Curves+ run. """
+#---
+class Configuration(object):
+    """Flexible dict-like object for configuration."""
+    def __init__(self, config={}, **kwargs):
+        """ Initialise with parameters.
+        Parameters can be specified both using the
+        =config= option (dict of parameters) or directly
+        in the constructor call."""
+        self.update(config)
+        self.update(kwargs)
+
+    def update(self, dict_):
+        """Update the class with the specified parameters."""
+        self.__dict__.update(dict_)
+
+    def update_existing(self, dict_):
+        """Update the class with specified parameters only
+        if they are alreay defined as attributes."""
+        for key, value in dict_.iteritems():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+    def __str__(self):
+        """Stringify meaningful, dict-like information."""
+        return ", ".join(
+            [ "%s: %s"%(attr, getattr(self, attr))
+               for attr in dir(self)
+            if not attr.startswith('__') and not callable(getattr(self,attr))])
+
+
+#---
+class CurvesConfiguration(Configuration):
+    """ Configuration of a generic Curves+ run. """
     pdbfile = ''
     pdbid = ''
     
@@ -49,18 +80,6 @@ class CurvesConfiguration(object):
     _params = """fit circ line zaxe refo 
     back wback wbase 
     naxlim""".split()
-
-    def __init__(self, config={}, **kwargs):
-        """ Initialise the run with parameters.
-        Parameters can be specified both using the
-        =config= option (dict of parameters) or directly
-        in the constructor call."""
-        self.update(config)
-        self.update(kwargs)
-
-    def update(self, dict_):
-        """Update the class with the specified parameters."""
-        self.__dict__.update(dict_)
 
     @staticmethod
     def fortran_tf(boo):
@@ -111,54 +130,103 @@ class CurvesConfiguration(object):
 """.format(infile, outfile, param_string, libprefix,
            strand_string)
 
-class CurvesRun(object):
+
+#---
+class WebCurvesConfiguration(CurvesConfiguration):
+    """ Configuration of a web-site Curves+ run. """
+    viewer = True
+
+
+#---
+class DummyCurvesRun(object):
     """
-    Abstract Curves+ run. Subclass this to generate
-    useable classes by implementing the "run()" method.
+    Not a Curves+ run. 
     """
     output_extensions = ".lis _X.pdb _B.pdb".split()
     
-    def __init__(self, config, lib, exefile, infile, outdir, outfile="output", infile_local_name="input.pdb"):
-        self.config = config
-        libfile = lib+"_b.lib"
-        assert os.path.isfile(libfile), "Library file doesn't exist <{}>".format(libfile)
-        assert os.path.isfile(exefile), "Executable file doesn't exist <{}>".format(exefile)
-        assert os.path.isfile(infile), "Input file doesn't exist <{}>".format(infile)
+    def __init__(self, outdir="", config=None, libbase="", exefile="", infile="input.pdb", 
+                 urlbase="", outfile="output", jobname="Curves+"):
+        """ Initialise the curves run providing:
+        =outdir=:  Full path to run output directory.
+        =config=:  CurvesConfiguration containing parameters for the run,
+        =libbase=: Base name for the Curves+ library,
+        =exefile=: Full path to Curves+ executable,
+        =infile=:  Name of run input file,
+
+        The default base name of output files is "output", but can be
+        configured using =outfile=. Optionally a jobname can be provided.
+        """
         self.outdir = outdir
-        self.outfile = outfile
-        self.infile = infile_local_name
-        infile_local = os.path.join(self.outdir, infile_local_name)
-        assert not os.path.isfile(infile_local), "Output folder already contains an input file <{}>".format(infile_local)
-        copy(infile, infile_local)
-        os.remove(infile)
-        self.config_string = self.config.string(infile_local_name, outfile, lib)
+        self.config = config
+        self.libbase = libbase
         self.executable = exefile
-        self.urlbase = ""
+        self.infile = infile
+        self.urlbase = urlbase
+        self.outfile = outfile
+        self.jobname = jobname
 
     def output_url(self, extension):
+        """Return the URL of the output file with the specified extension"""
         return self.urlbase+"/"+self.outfile+extension
 
     def output_file(self, extension):
+        """Return the PATH of the output file with the specified extension"""
         return os.path.join(self.outdir,self.outfile+extension)
 
     def output_files(self):
+        """Return the PATH of all output files"""
         for ext in self.output_extensions:
             yield self.output_file(ext)
 
     def _check_outputs(self, op = lambda x,y: x or y):
-        """ Check if output files exist. """
-        return reduce(op, 
-            [os.path.isfile(output) for output in self.output_files()])
+        """ Return a dictionary specifiying if each output
+        file exists. """
+        return {output: os.path.isfile(output) for output in self.output_files()}
 
     def any_output(self):
-        return self._check_outputs()
+        """ Shortcut to check if any output file exists. """
+        return reduce(lambda x,y: x or y, self._check_outputs().values())
 
     def all_outputs(self):
-        return self._check_outputs(op = lambda x,y: x and y)
+        """ Shortcut to check if all output files exist. """
+        return reduce(lambda x,y: x and y, self._check_outputs().values())
+
+
+#---
+class CurvesRun(DummyCurvesRun):
+    """
+    Abstract Curves+ run. Subclass this to generate
+    useable classes by implementing the "run()" method.
+    """
+    def __init__(self, outdir="", libbase="", exefile="", infile="", 
+                 infile_local_name="input.pdb", **kwargs):
+        """ See DummyCurvesRun. Here, some checks are performed on the input.
+        The run input file is copied to a
+        local location before execution, by default named "input.pdb"
+        configurable with =infile_local_name=.
+        """
+        
+        """ Check that required input files exist """
+        libfile = libbase+"_b.lib"
+        assert os.path.isfile(libfile), "Library file doesn't exist <{}>".format(libfile)
+        assert os.path.isfile(exefile), "Executable file doesn't exist <{}>".format(exefile)
+        assert os.path.isfile(infile), "Input file doesn't exist <{}>".format(infile)
+        """ Copy the input file locally, then remove original """
+        infile_local = os.path.join(outdir, infile_local_name)
+        assert not os.path.isfile(infile_local), "Output folder already contains an input file <{}>".format(infile_local)
+        shell_copy(infile, infile_local)
+        os.remove(infile)
+        super(CurvesRun, self).__init__(
+            outdir=outdir, libbase=libbase, exefile=exefile, infile=infile_local_name,
+            **kwargs)
+        """ Generate the run configuration string using CurvesConfiguration.string() """
+        self.config_string = self.config.string(self.infile, self.outfile, self.libbase)
 
     def run(self):
         pass
 
+
+#---
 class SubprocessCurvesRun(CurvesRun):
     """
     Curves Run that uses Python's =subprocess=.
@@ -168,13 +236,15 @@ class SubprocessCurvesRun(CurvesRun):
     executable are taken from configuration variables
     CURVESPLUS_HOME and CURVESPLUS_EXE, respectively.
     """
-    def __init__(self, config, infile):
+    def __init__(self, config, infile, **kwargs):
         libbase = os.path.join(app.config["CURVESPLUS_HOME"], "standard")
         exefile = app.config["CURVESPLUS_EXE"]
         outdir = tempfile.mkdtemp(dir=app.static_folder)
+        urlbase = outdir[outdir.find('static'):]
         super(SubprocessCurvesRun, self).__init__(
-            config, libbase, exefile, infile, outdir)
-        self.urlbase = outdir[outdir.find('static'):]
+            outdir=outdir, config=config, libbase=libbase,
+            exefile=exefile, infile=infile, urlbase=urlbase,
+            **kwargs)
         
     def run(self):
         from subprocess import Popen, PIPE, STDOUT
