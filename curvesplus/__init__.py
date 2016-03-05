@@ -31,7 +31,7 @@ configure_uploads(app, (pdbfiles,))
 
 from .util import download_pdb
 from .forms import CurvesForm
-from .curvesrun import CurvesConfiguration, SubprocessCurvesRun
+from .curvesrun import WebCurvesConfiguration, DummyCurvesRun, SubprocessCurvesRun
 
 ## Backend actions around request
 # @app.before_request
@@ -75,26 +75,46 @@ def misc():
 def home():
     return render_template('home.html')
 
+
 #-----
-class Options(object):
-    """Contains information the "analyse" template
-    expects to find in order to decide how to output."""
-    viewer = True
-    def update_from(self, _dict):
-        for key, value in _dict.iteritems():
-            if hasattr(self, key):
-                setattr(self, key, value)
-    
-    def __str__(self):
-        return ", ".join(
-            [ "%s: %s"%(attr, getattr(self, attr))
-               for attr in dir(self)
-            if not attr.startswith('__') and not callable(getattr(self,attr))])
+def success_response(run, conf=None):
+    """ Handle the response for a successful Curves+ run.
+    Specify the CurvesRun object and optionally the
+    CurvesConfiguration.
+    """
+    def OutputFile(path, url, name, ext):
+        """ Utility function to generate file information dict """
+        return dict(path = path,
+                    url = url,
+                    name = name,
+                    extension = ext)
+    """ Generate the =files= structure to pass to the template """
+    files = {}
+    extensions = []
+    for ext in run.output_extensions:
+        if not os.path.isfile(run.output_file(ext)): continue
+        files[ext] = OutputFile(run.output_file(ext),
+                                run.output_url(ext),
+                                run.outfile+ext, ext)
+    files["in"] = OutputFile(
+        os.path.join(run.outdir, run.infile),
+        run.urlbase+"/"+run.infile,
+        run.infile, ".pdb")
+    """ Fill session with necessary information from run """
+    session['lisfile'] = run.output_file(".lis")
+    session['outdir']  = run.outdir
+    session['outurl']  = run.urlbase
+    session['files'] = files
+    return render_template('analyse.html',
+                           files = files,
+                           job = run.jobname,
+                           options=conf)    
+
 
 #-----
 @app.route('/analyse', methods=['GET','POST'])
 def analyse():
-    configuration = CurvesConfiguration()
+    configuration = WebCurvesConfiguration()
     form = None
     form = CurvesForm(request.form, obj=configuration)
     # if len(request.form) == 0:
@@ -102,14 +122,30 @@ def analyse():
     # else:
     #     form = CurvesForm(request.form)
 
+    class DummyException(Exception):
+        """Dummy exception to exit the next try."""
+        pass
+
     try:
-        options = Options()
-        if request.method == 'POST' and form.validate():
+        if request.method == 'GET' and request.args.get("runID") is not None:
+            runid = request.args.get("runID")
+            outdir = os.path.join(app.static_folder, runid)
+            urlbase = outdir[outdir.find('static'):]
+            curvesrun = DummyCurvesRun(outdir=outdir, urlbase=urlbase)
+            app.logger.info(curvesrun)
+            if curvesrun.any_output():
+                app.logger.info("Displaying run %s"%runid)
+                return success_response(curvesrun, configuration)                
+            else:
+                flash("No previously executed run with ID %s found."%runid, 'danger')
+                raise DummyException()
+            
+        elif request.method == 'POST' and form.validate():
             "Populate configuration with form entries."
             form.populate_obj(configuration)
-            "Take some form entries as options."
-            options.update_from(form.data)
-            app.logger.info("Options: <%s>"%options)
+            # "Take some form entries as options."
+            # options.update_from(form.data)
+            app.logger.info("Configuration: <%s>"%configuration)
             #assert 1==0
             "Treat special case of input file"
             jobname = None
@@ -126,12 +162,12 @@ def analyse():
                 jobname = configuration.pdbid
             else:
                 flash('ERROR: Must specify either a PDB File or a valid PDBid.', 'danger')
-                raise ValueError()
+                raise DummyException()
 
             app.logger.info("JOB name: <%s>"%jobname)
             app.logger.info("PDB file: <%s>"%pdbfilename)
 
-            curvesrun = SubprocessCurvesRun(configuration, pdbfilename)
+            curvesrun = SubprocessCurvesRun(configuration, pdbfilename, jobname=jobname)
             retrun = curvesrun.run()      #XXX TODO: async
 
             message=""
@@ -141,7 +177,7 @@ def analyse():
             if not curvesrun.any_output():
                 """ if all output files aren't present, flash stderr and stop """
                 flash("ERROR: No output files produced. "+message, 'danger')
-                raise ValueError()
+                raise DummyException()
             elif not curvesrun.all_outputs():
                 """ if any output file isn't present, flash stderr """
                 message = "WARNING: Some output files missing. "+message
@@ -152,36 +188,14 @@ def analyse():
 
             app.logger.info("Temp dir <%s>"%curvesrun.urlbase)
             if retrun:
-                session['lisfile'] = curvesrun.output_file(".lis")
-                session['outdir']  = curvesrun.outdir
-                session['outurl']  = curvesrun.urlbase
-                files = {}
-                extensions = []
-                for ext in curvesrun.output_extensions:
-                    if not os.path.isfile(curvesrun.output_file(ext)): continue
-                    files[ext] = OutputFile(curvesrun.output_file(ext),
-                                            curvesrun.output_url(ext),
-                                            curvesrun.outfile+ext, ext)
-                files["in"] = OutputFile(
-                    os.path.join(curvesrun.outdir, curvesrun.infile),
-                    curvesrun.urlbase+"/"+curvesrun.infile,
-                    curvesrun.infile, ".pdb")
-                session['files'] = files
-                return render_template('analyse.html', files=files, job=jobname, options=options)
-    except ValueError:
+                success_response(curvesrun, configuration)
+    except DummyException:
         pass
     except AssertionError as e:
         raise e
     except Exception as e:
-        raise e
         flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
     return render_template('prepare.html', form=form)
-
-def OutputFile(path, url, name, ext):
-    return dict(path = path,
-                url = url,
-                name = name,
-                extension = ext)
 
 
 #-----
