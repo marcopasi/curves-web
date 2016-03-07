@@ -17,6 +17,10 @@
     var option = select.children("[data-slide-to="+destination+"]")[0];
     select.val(option.value);
   });
+  $(document).ready(function() {
+    $("img[data-src]").each(function() {
+      $(this).attr("src", $(this).attr("data-src"));});
+  });
 </script>
 {% endblock %}
 
@@ -45,7 +49,7 @@
   <div class="carousel-inner" role="listbox">
     {% for variable in variables %}
     <div class="item {% if variable == 'twist' %} active {% endif %}">
-      <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
+      <img data-src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
       <!-- <div class="carousel-caption">{{ variable|capitalize }}</div> -->
     </div>
     {% endfor %}
@@ -54,7 +58,7 @@
   <!-- Controls -->
   <select id="plots_selector" class="ccontrol" data-target="#plots">
     {% for variable in variables %}
-      <option value="{{ variable }}" data-slide-to="{{ loop.index0 }}" {% if variable == 'twist' %} selected {% endif %}>{{ variable|capitalize }}</option>
+    <option value="{{ variable }}" data-slide-to="{{ loop.index0 }}" {% if variable == 'twist' %} selected {% endif %}>{{ variable|capitalize }}</option>
     {% endfor %}
   </select>
   <a class="l ccontrol" href="#plots" role="button" data-slide="prev">
