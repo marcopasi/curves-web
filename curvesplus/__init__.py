@@ -188,7 +188,7 @@ def analyse():
 
             app.logger.info("Temp dir <%s>"%curvesrun.urlbase)
             if retrun:
-                success_response(curvesrun, configuration)
+                return success_response(curvesrun, configuration)
     except DummyException:
         pass
     except AssertionError as e:
