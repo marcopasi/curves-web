@@ -18,6 +18,8 @@ var LOADERIMG="/static/img/curves-loader.gif"; // path to ajax loader image
 var APPWIDTH= "95%";	  // !! modify .jmol width in style definition
 var APPHEIGHT= 400;
 
+var DEBUG = false;
+
 /* PDB parsing SETTINGS */
 var BBRES = "BAC";
 var GRRES = "GRV";
@@ -73,28 +75,47 @@ var AXCOLOR = "blue";
 var hasBB = true;
 var hasAX = true;
 var hasProtein = false;
-var append = "";
 var naon = true;		// whether the na/pr are shown
 var pron = true;
 var naid = "NA";		// id of na/pr in Radiobutton html id's
 var prid = "PR";
 
+
+var loadstr = "";
 /*
- * Initialize Jmol, create applet and start creating interface
+ * Initialize Jmol, create applet and start creating interface.
+ * Also build the load script which will be run on ready.
  */
 function jmol_viewer(AXPATH, BBPATH, PDBPATH) {
-
     jmolInitialize(JMOLPATH);
     jmolSetAppletColor(BGCOLORS[0]);
     jmolSetCallback("messageCallback", "_msg")
+    jmolSetCallback("readyFunction", jmol_init)
 
-    var loadstr = "";
+    var loadax = "";
+    var loadbb = "";
+    var append = "";
+    if(DEBUG) {
+        loadstr += "\
+console;set debug ON;\
+";
+    }
     /*
      * Check that the AX file is present; otherwise push the index for PDB and BB one up
      */
     if(typeof(AXPATH) != "undefined") {
-        loadstr += "load \""+AXPATH+"\";"
-        append = "APPEND";
+        // calculate AXis rotation only if present
+        loadax = "load \""+AXPATH+"\"; \
+select */"+axf+"; \
+cpk off; \
+wireframe "+awf+"; \
+color "+AXCOLOR+"; \
+As={(*/"+axf+")[1]}.xyz; \
+Af={(*/"+axf+")[0]}.xyz; \
+df=As-Af; \
+vf= @{df/sqrt(df*df)}; \
+AyQ = !quaternion(cross({0 1 0},vf), acos({0 1 0}*vf));"
+        append = "append";
     }else{
         hasAX = false;
         pdf -= 1;
@@ -105,56 +126,50 @@ function jmol_viewer(AXPATH, BBPATH, PDBPATH) {
      * Check that the BB file is present; otherwise push the index for the PDB one up
      */
     if(typeof(BBPATH) != "undefined") {
-        loadstr += "load "+append+" \""+BBPATH+"\";";
-        append = "APPEND";
+        loadbb = "load "+append+" \""+BBPATH+"\"; \
+select */"+bbf+"; \
+cpk off; \
+wireframe "+bwf+"; \
+color gray;";
+        append = "append";
     }else{
         hasBB = false;
         pdf -= 1;
     }
 
     /*
-     * PDB must be loaded last
-     */
-    
-    /*
      * TODO: used to have automatic zoom factor;
      * but it doesn't support 100% width: solve this.
-ZF="+(APPHEIGHT/APPWIDTH*100)+"; \
-zoom @ZF; \
-    */
+     *
+    var zoomfactor = (APPHEIGHT/APPWIDTH*100); */
+    var zoomfactor = 100;
+    zoomstr = "\
+ZF="+zoomfactor+"; \
+zoom @ZF;";
     
-    loadstr += "\
+    /*
+     * PDB must be loaded last
+     */
+    loadstr += loadax + loadbb + "\
 load "+append+" \""+PDBPATH+"\"; \
 center; \
-select */"+pdf+"; cpk off;wireframe off;delete solvent;"
-
-    if(hasAX) {			// calculate AXis rotation only if present
-        loadstr += "\
-select */"+axf+"; cpk off; wireframe "+awf+"; color "+AXCOLOR+"; \
-As={(*/"+axf+")[1]}.xyz; \
-Af={(*/"+axf+")[0]}.xyz; \
-df=As-Af; \
-vf= @{df/sqrt(df*df)}; \
-AyQ = !quaternion(cross({0 1 0},vf), acos({0 1 0}*vf));";
-    }
-
-    if(hasBB) {			// change representation of BB only if present
-        loadstr += "\
-select */"+bbf+"; cpk off; wireframe "+bwf+"; color gray;";
-    }
-
-    loadstr += "\
+select */"+pdf+"; \
+cpk off; \
+wireframe off; \
+delete solvent; \
 sps=off; \
 piso=off; \
 niso=off; \
-frame all; \
-print \"loaddone\"; \
-";
+frame all; "+zoomstr+" \
+print \"loaddone\";";
 
     /*
      * create all GUI elements
      */
-    jmolApplet([APPWIDTH, APPHEIGHT], loadstr);
+    // Jmol.Info['coverImage'] = COVERIMG;
+    // Jmol.Info['coverTitle'] = "Loading...";
+    // Jmol.Info['deferUncover'] = true;
+    jmolApplet([APPWIDTH, APPHEIGHT]);
 
     // show/hide models:
     jmolHtml("<div id=\"isoload\" class=\"load\"><img class=\"loader\" src=\""+LOADERIMG+"\" />Generating...</div>");
@@ -195,6 +210,24 @@ print \"loaddone\"; \
     }
     jmolHtml("</div></div></div>");
 }
+
+/*
+ * Run the load script and create result-dependent interface elements.
+ */
+function jmol_init() {
+    jmolScriptWait(loadstr);
+    if(DEBUG) console.log("Done loading models.");
+    var chi = JSON.parse(jmolGetPropertyAsJSON("chaininfo")); // chainInfo object
+    _initPDB(chi.chaininfo);
+    _nash(pdf, 1);
+    _prsh(pdf, 1);
+    if(hasBB) {    // only init BB if the backbone file is present
+	_initBB(chi.chaininfo);
+    }
+    if(DEBUG) console.log("Hiding loader.");
+    document.getElementById("load").style.display = "none";
+}
+
 
 /* SHOW/HIDE FUNCTIONS */
 var shstr = "display displayed or selected;";
@@ -312,7 +345,8 @@ function _sbbg(bbchi) {		// [selections] for the grooves
 /* HELPER FUNCTIONS */
 
 function _setbg(el) {		// set background color of Applet
-    return jmolScript("background "+el.id);
+    jmolScript("background "+el.id);
+    return false;
 }
 
 function _jmol2js_color(c) {
@@ -328,20 +362,13 @@ function _jmol2js_color(c) {
 
 function _msg(el,msg) {		// messageCallback function
     msg=""+msg;
+    if(DEBUG) console.log("JMol: ",msg);
     
-    if(msg.indexOf("loaddone") >= 0) { // done loading all models
-	var chistr = jmolGetPropertyAsJSON("chaininfo"); // chainInfo object
-	var chi = eval("("+chistr+")");
-	_initPDB(chi.chaininfo);
-	_nash(pdf, 1);
-	_prsh(pdf, 1);
-	if(hasBB) {    // only init BB if the backbone file is present
-	    _initBB(chi.chaininfo);
-	}
-	document.getElementById("load").style.display = "none";
-    } else if(msg.indexOf("isocreate") >= 0) { // start creating isosurface
+    if(msg.indexOf("isocreate") >= 0) { // start creating isosurface
+        if(DEBUG) console.log("Showing surface loader.");
 	document.getElementById("isoload").style.display = "block";
     }else if(msg.indexOf("isodone") >= 0) { // done creating isosurface
+        if(DEBUG) console.log("Hiding surface loader.");
 	document.getElementById("isoload").style.display = "none";
     }
     return true;
@@ -364,10 +391,11 @@ function _prshwrap(id, prep) {
 }
 
 function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [and protein]
-
+    if(DEBUG) console.log("initPDB");
     var nacontrols = "";
     var procontrols = "";
     jmolSetDocument(null);
+    if(DEBUG) console.log("Creating NA controls...");
     // Nucleic acid
     nacontrols += jmolHtml("<div class=\"disptk\"><div class=\"nacheck\">");
     nacontrols += jmolCheckbox("javascript _nash("+pdf+",2)","javascript  _nash("+pdf+",0)", "Nucleic Acid: ", "checked");
@@ -380,8 +408,12 @@ function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [an
     nacontrols += jmolRadioGroup(pradio, null, "jmolRadioGroup"+naid+"disp")
     nacontrols += jmolHtml("</div></div>");
 
+    if(DEBUG) console.log("Creating PRO controls...");
     // determine whether a protein is present
-    if(jmolGetPropertyAsArray("modelInfo","protein AND */"+pdf).models.length > 0) {
+    jmolScriptWait("select protein");
+    var number_models = jmolEvaluate("{selected}.size");
+    if(DEBUG) console.log("Protein models: ",number_models);
+    if(number_models > 0) {
 	hasProtein=true;
 	// Protein
 	procontrols += jmolHtml("<div class=\"disptk\"><div class=\"nacheck\">");
@@ -397,7 +429,8 @@ function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [an
     }else{
 	hasProtein=false;
     }
-	
+    
+    if(DEBUG) console.log("DONE.");
     document.getElementById("nadisplay").innerHTML = nacontrols;
     document.getElementById("prodisplay").innerHTML = procontrols;
     return true;
@@ -423,17 +456,20 @@ function _initBB(chi) { // initialise dynamically-derived backbone
 	bbsele = '(:A OR :B)';
     }
     
+    if(DEBUG) console.log("Building BB selection...");
     var bbstr = "";
     for(gi=0; gi<grooves.length; gi++) {
 	bbstr += "select */"+bbf+" AND "+grooves[gi]+"; color bonds "+GRVCOLORS[gi]+";";
     }
     bbstr += "select */"+bbf+" AND "+bbsele+"; color "+BACCOLOR+";";
+    if(DEBUG) console.log("DONE: ", bbstr);
     var ret1 = jmolScript(bbstr);
     
     /*
      * Insert the controls for bb and grooves
      */
     
+    if(DEBUG) console.log("Creating BB controls...");
     var bbcontrols = "";
     jmolSetDocument(null);
     var bbsele2="*/"+bbf+" AND "+bbsele;
@@ -448,6 +484,7 @@ function _initBB(chi) { // initialise dynamically-derived backbone
 	bbcontrols += jmolCheckbox(_chsh(bbf, grooves[gi], 1), _chsh(bbf, grooves[gi], 0), "Groove "+gid, "checked");
 	bbcontrols += jmolBr();
     }
+    if(DEBUG) console.log("DONE");
     document.getElementById("bbdisplay").innerHTML = bbcontrols;
     return ret1;
 }
