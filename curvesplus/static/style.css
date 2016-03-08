@@ -5,6 +5,10 @@ h2 { text-decoration: underline; }
 .lopad {font-size: small; margin: 25px 0;}
 h2.top {margin-top: 0;}
 
+/* home */
+.shadow {box-shadow: 10px 10px 5px #888888; border: 1px solid #888888;}
+.marginl {margin: 20px 50px;}
+
 /* form */
 form dl { float: left; padding-right: 50px; }
 form dt { margin-right: 10px; }
