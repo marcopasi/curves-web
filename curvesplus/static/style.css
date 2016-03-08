@@ -67,6 +67,10 @@ select.ccontrol, select.ccontrol:hover, select.ccontrol:focus {
 }
 
 
+/* Other pages */
+table.parameters td {padding-left: 30px;}
+
+
 /* publication list */
 .volume { font-weight: bold; }
 .journal { font-style: italic; }

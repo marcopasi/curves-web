@@ -15,18 +15,22 @@ numbers in each strand are -73 to +73, but the Curves+ input is 1:147 for the fi
 and 294:148 for the second strand (3’-5’). Note base 1 is paired to base 294, 2 to 293, etc.
 
 <br/>
-<br/>
-
-<table>
-<tr><th>Fit:</th><td>         if T a standard base conformations are fitted to the I/P coordinates (recommended)</td></tr>
+<h3>Curves+ parameters:</h3>
+<table class="parameters">
+<tr><th>Fit:</th><td>         if T standard base conformations are fitted to the I/P coordinates (recommended)</td></tr>
 <tr><th>Circ:</th><td>      set T to analyze circular DNA</td></tr>
 <tr><th>Line:</th><td>      set T to find optimal linear helical axis (not compatible with Zaxe=T)</td></tr>
 <tr><th>Zaxe:</th><td>     set T to use Cartesian Z-axis as helical axis (not compatible with Line=T)</td></tr>
 <tr><th>Refo:</th><td>     set T to use old base reference system (pre-Tsukuba convention)</td></tr>
-<tr><th>Test:</th><td>      set T for more detailed test output including helical axis vectors and ref. points</td></tr>
+<!-- <tr><th>Test:</th><td>      set T for more detailed test output including helical axis vectors and ref. points</td></tr> -->
 <tr><th>Back:</th><td>    atom used to define backbone splines (default P, can be any backbone atom)</td></tr>
 <tr><th>Wback:</th><td> width of backbone (default 2.9 - used in calculating groove width, depends on ‘Back’)</td></tr>
 <tr><th>Wbase:</th><td> ½ width of base pair (default 3.5 - used in calculating groove depth)</td></tr>
+<tr><th>Naxlim:</th><td> if naxliim > 0, calculates overall bend skipping naxlim base levels at the 5'- and 3'-ends (default 0)</td></tr>
 </table>
 
+<h3>Other parameters:</h3>
+<table class="parameters">
+<tr><th>3D Viewer:</th><td>Toggle the 3D viewer in the results page</td></tr>
+</table>
 {% endblock %}
