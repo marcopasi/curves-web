@@ -93,7 +93,7 @@ div.naradio {margin-left: 5%; font-size: 80%;}
 div.colors {font-weight: 700; margin: 5px 0;}
 .cimg {display:inline-block; width: 1.2em; height: 1.2em;}
 .buttons > span {margin-top: 5px;}
-.helpline {font-size: small;}
+.helpline {font-size: small; padding-left: 15px;}
 div.load {position: absolute; top: 0; background: white; z-index: 10000; padding: 0.1em; width: 95%; border: 2px solid #7a002f;}
 .loader {height: 1em; margin: auto 5px; }
 #isoload {display: none;}
