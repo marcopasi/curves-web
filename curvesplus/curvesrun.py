@@ -75,11 +75,13 @@ class CurvesConfiguration(Configuration):
     wback = 2.9
     wbase = 3.5
     naxlim = 3
+    rvfac = 7.5
 
     "These parameters go in the namelist"
     _params = """fit circ line zaxe refo 
     back wback wbase 
-    naxlim""".split()
+    naxlim
+    rvfac""".split()
 
     @staticmethod
     def fortran_tf(boo):
@@ -142,7 +144,7 @@ class DummyCurvesRun(object):
     """
     Not a Curves+ run. 
     """
-    output_extensions = ".lis _X.pdb _B.pdb".split()
+    output_extensions = ".lis _X.pdb _B.pdb _R.pdb".split()
     
     def __init__(self, outdir="", config=None, libbase="", exefile="", infile="input.pdb", 
                  urlbase="", outfile="output", jobname="Curves+"):

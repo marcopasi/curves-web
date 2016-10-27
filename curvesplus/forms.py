@@ -65,6 +65,7 @@ class CurvesForm(Form):
     wback = FloatField('Wback', [Required()])
     wbase = FloatField('Wbase', [Required()])
     naxlim = IntegerField('Naxlim', [Required()])
+    rvfac = FloatField('RVFac', [Required()])
 
     def validate_pdbfile(self, field):
         pass
