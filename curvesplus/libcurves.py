@@ -10,7 +10,7 @@ LibCurves: Parse Curves+ lis outputs and plot results using matplotlib.
 """
 
 import pandas as pd
-from numpy import inf
+from numpy import inf, pad
 
 # TODO:
 # 1) FileIntervals: rename and comment
@@ -22,6 +22,7 @@ from numpy import inf
 #    3. Resn # (1 number per level), Level direction (third, fifth column of bp_axis)
 #    Where # indicates there is one series per strand.
 # 5) LisFile: Define more robust parsing of nml entries.
+# 6) Define a "unit" class (Ang, Deg, InvAng, etc) with specified name and symbol
 
 #----------------------------------------------------------------------------------
 class FileIntervals(file):
@@ -124,23 +125,33 @@ class Curves(object):
     """
     section_headers = [
         "",
-        "  (A) BP-Axis", "  (B) Intra-BP parameters", 
-        "  (C) Inter-BP", "  (D) Backbone Parameters",
-        "  (E) Groove parameters", "  (I) " ]
+        "  (A) BP-Axis",
+        "  (B) Intra-BP parameters", 
+        "  (C) Inter-BP",
+        "  (D) Backbone Parameters",
+        "  (E) Groove parameters",
+        "  (F) Curvature analysis",
+        "  (I) " ]
     bp_axis_variables = "xdisp ydisp inclin tip ax-bend".split()
     intra_bp_variables= "shear stretch stagger buckle propeller opening".split()
     inter_bp_variables= "shift slide rise tilt roll twist h-rise h-twist".split()
     backbone_variables= "alpha beta gamma delta epsilon zeta chi phase amplitude pucker".split()
     maxgrooves = 4
     groove_variables = ["%s%d"%(var,num) for num in range(maxgrooves) for var in "width depth".split()]
+    curvature_variables = "curvature radius register".split()
     curves_variables  = bp_axis_variables + intra_bp_variables + \
-                          inter_bp_variables + backbone_variables + groove_variables
+                          inter_bp_variables + backbone_variables + groove_variables + \
+                          curvature_variables
     units = ("angstrom angstrom degree degree degree " +
              "angstrom angstrom angstrom degree degree degree " +
              "angstrom angstrom angstrom degree degree degree angstrom degree " +
              "degree degree degree degree degree degree degree degree degree degree").split() + \
-            "angstrom angstrom".split()*maxgrooves
+            "angstrom angstrom".split()*maxgrooves + \
+            "a.u. angstrom degree".split()
     assert len(units) == len(curves_variables)
+
+    ## plot configuration
+    MAX_LEN_SEQ = 20
     
     @classmethod
     def is_variable(cls, var):
@@ -169,6 +180,7 @@ class Curves(object):
         self.inter_bp = self._read_interbp()
         self.backbone = self._read_bckbone()
         self.groove   = self._read_groove()
+        self.curvature= self._read_curvature()
 
     def _read_header(self):
         """
@@ -240,8 +252,21 @@ class Curves(object):
         names  = "N L Ln".split() + self.groove_variables
         return self.lisfile.read_section(widths, usecols, names, header=4, footer=0)
 
+    def _read_curvature(self):
+        #    N    BP step        Cur      Rad      Reg
+        # ---------------------------------------------
+        #
+        #       write(6,15) i2,na(i2,1),nu(i2,1),na(i3,1),nu(i3,1),curv,
+        #      1 rho,reg*crd
+        # 15    format(2x,i3,') ',a1,i4,'/',a1,i4,2x,3f9.3)
+        widths = (2,3,2,1,4,1,1,4,2) + (9,)*3
+        usecols= [1,3,4,6,7] + range(9,12)
+        names  = "Entry L Ln U Un".split() + self.curvature_variables
+        return self.lisfile.read_section(widths, usecols, names, header=4, footer=2)
+
     def normalize_interval(self, interval=None):
         """Return a valid interval for this DNA molecule."""
+        # XXX TODO: circular molecules have one more entry for inter,backbone,groove,curvature
         if interval is None:
             interval = [0, self.nbp]
         start, end = interval[:]
@@ -255,7 +280,7 @@ class Curves(object):
             end += self.nbp
 
         return start, end
-        
+
     def get_variable(self, varname, interval=None, step=1):
         """Return the Series corresponding to an interval of the specified variable"""
         if not self.is_variable(varname):
@@ -281,6 +306,9 @@ class Curves(object):
             # grooves start at 1.5, step 0.5
             start = max((start-1)*2+1, 0)
             end = (end-1)*2
+        elif varname in self.curvature_variables:
+            y = self.curvature[varname]
+            x = self.curvature.Ln
         return y[start:end:step], x[start:end:step]
 
     @property
@@ -290,7 +318,9 @@ class Curves(object):
     def sequence(self, sequence):
         raise NotImplementedError
 
-    def plot(self, varname, interval=None, step=1, hold=False):
+    def plot(self, varname, interval=None, seq=True, step=1, hold=False,
+             xtransform=None, ytransform=None,
+             **kwargs):
         """Plot a variable on an interval using pyplot."""
         import matplotlib.pyplot as plt
 
@@ -307,7 +337,11 @@ class Curves(object):
         dx = 0.0
         if varname in self.inter_bp_variables or varname in self.backbone_variables:
             dx = 0.5
-        plot = plt.plot(x.values+dx, y.values)
+        if xtransform:
+            x=x.apply(xtransform)
+        if ytransform:
+            y=y.apply(ytransform)
+        plot = plt.plot(x.values+dx, y.values, **kwargs)
         if dx > 0:
             # TODO: instead of extrapolating, get next value from bp_axis or intra_bp
             nx = len(x)
@@ -318,17 +352,18 @@ class Curves(object):
         if varname in self.groove_variables:
             I = x.apply(lambda x: x == round(x))
             x = x[I]
+            # XXX temporarily pad I with False to account for circular molecules
+            I = pad(I, (0, self.groove.Ln.shape[0] - I.shape[0]),
+                    'constant', constant_values=False)
             xnames = self.groove.Ln[I].values
         else:
             xnames = x.values
-        seq = self.sequence[xnames]
-        if len(x) <= 20:
-            plt.xticks(x, seq)
+        if seq:
+            seq = self.sequence[xnames]
+            if len(seq) < self.MAX_LEN_SEQ:
+                plt.xticks(x, seq)
         plt.xlim([min(x), max(x)])
-        if varname in self.groove_variables:
-            plt.xlabel("Level")
-        else:
-            plt.xlabel("Basepair")
+        plt.xlabel("Basepair")
         plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
         return plot
                     
