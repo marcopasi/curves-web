@@ -32,8 +32,8 @@
     <h2 class="top">Results: {{ job|truncate(16, True) }}</h2>
     <dl class=files>
       <dt>Download single files:</dt>
-	{% for file in files.values() %}
-	<dd><a href="{{ file['url'] }}">{{ file['name'] }}</a></dd>
+	{% for filename in "_B.pdb _X.pdb _R.pdb .lis in".split() %}
+	<dd><a href="{{ files[filename]['url'] }}">{{ files[filename]['name'] }}</a></dd>
 	{% endfor %}
 	<br/>
       <dt>Download all files:</dt>
