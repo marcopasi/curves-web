@@ -25,11 +25,6 @@ var BBRES = "BAC";
 var GRRES = "GRV";
 //var AXRES = "AXI";
 
-/* frame indexes */
-var axf = 1;
-var bbf = 2;
-var pdf = 3; // must be last
-
 /* VISUALIZATION SETTINGS */
 // PDB: nucleic acid
 var nwf = 0.15; // default wireframe radius for pdb
@@ -46,6 +41,7 @@ var pisoc = "deepskyblue translucent";
 // Axis and backbone
 var awf = 0.3; // default wireframe radius for axis
 var bwf = 0.3; // default wireframe radius for backbone
+var cwf = 0.3; // default wireframe radius for curvature
 // Display modes definition: nucleic acid
 var PDISPMODES = [
     "isosurface piso off;wireframe off;cartoon;color "+pcc+";",
@@ -71,7 +67,9 @@ var GRVCOLORS=["lawngreen", "orange", "pink", "silver"];
 var BACCOLOR = "red";
 var BGCOLORS =["[0xd4d4d4]","white","black","powderblue"];
 var AXCOLOR = "blue";
+var CRCOLOR = "blue";
 
+var hasCR = true;
 var hasBB = true;
 var hasAX = true;
 var hasProtein = false;
@@ -86,7 +84,7 @@ var loadstr = "";
  * Initialize Jmol, create applet and start creating interface.
  * Also build the load script which will be run on ready.
  */
-function jmol_viewer(AXPATH, BBPATH, PDBPATH) {
+function jmol_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
     jmolInitialize(JMOLPATH);
     jmolSetAppletColor(BGCOLORS[0]);
     jmolSetCallback("messageCallback", "_msg")
@@ -94,16 +92,20 @@ function jmol_viewer(AXPATH, BBPATH, PDBPATH) {
 
     var loadax = "";
     var loadbb = "";
+    var loadcr = "";
     var append = "";
     if(DEBUG) {
         loadstr += "\
 console;set debug ON;\
 ";
     }
+
+    var curframe = 0;
     /*
      * Check that the AX file is present; otherwise push the index for PDB and BB one up
      */
     if(typeof(AXPATH) != "undefined") {
+        axf = ++curframe;
         // calculate AXis rotation only if present
         loadax = "load \""+AXPATH+"\"; \
 select */"+axf+"; \
@@ -118,14 +120,13 @@ AyQ = !quaternion(cross({0 1 0},vf), acos({0 1 0}*vf));"
         append = "append";
     }else{
         hasAX = false;
-        pdf -= 1;
-        bbf -= 1;
     }
 
     /*
      * Check that the BB file is present; otherwise push the index for the PDB one up
      */
     if(typeof(BBPATH) != "undefined") {
+        bbf = ++curframe;
         loadbb = "load "+append+" \""+BBPATH+"\"; \
 select */"+bbf+"; \
 cpk off; \
@@ -134,9 +135,23 @@ color gray;";
         append = "append";
     }else{
         hasBB = false;
-        pdf -= 1;
     }
 
+    /*
+     * Check that the CR file is present; otherwise push the index for PDB and BB one up
+     */
+    if(typeof(CRPATH) != "undefined") {
+        crf = ++curframe;
+        loadcr = "load "+append+" \""+CRPATH+"\"; \
+select */"+crf+"; \
+cpk off; \
+wireframe "+cwf+"; \
+color "+CRCOLOR+";";
+        append = "append";
+    }else{
+        hasCR = false;
+    }
+    
     /*
      * TODO: used to have automatic zoom factor;
      * but it doesn't support 100% width: solve this.
@@ -150,7 +165,9 @@ zoom @ZF;";
     /*
      * PDB must be loaded last
      */
-    loadstr += loadax + loadbb + "\
+    pdf = ++curframe;
+    
+    loadstr += loadax + loadbb + loadcr + "\
 load "+append+" \""+PDBPATH+"\"; \
 center; \
 select */"+pdf+"; \
@@ -185,6 +202,11 @@ print \"loaddone\";";
     // placeholder for dynamically derived backbone and grooves
     jmolHtml("<div id=\"bbdisplay\" >&nbsp;</div>");
     jmolHtml("</div>");
+    if(hasCR) {
+        jmolHtml("<div id=\"crdisplay\">");
+        jmolCheckbox(_sh(crf,1),_sh(crf,0), "Curvature", "checked");
+        jmolHtml("</div>");
+    }
     
     // color choice and rotation buttons
     jmolHtml("<div class=\"rcontrols col-md-6\">");
