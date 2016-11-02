@@ -1,6 +1,6 @@
       program Canion
 c***********************************************************************
-c***** Ion/water analysis           Ver 3.2 RL/KZ/MP/JHM   8/2014 ******
+c***** Ion/water analysis           Ver 3.5 RL/MP/KZ/JHM  10/2016 ******
 c***********************************************************************
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
@@ -17,28 +17,36 @@ c***********************************************************************
       character*1 mcha,ct,cs
       character*3 ext
       character*4 inam,imnam,munit,title1*20,title2*20
-      character*148 lis,dat,axfrm,solute,prop,type,seq,seqc,
+      character*128 lis,dat,axfrm,solute,prop,type,seq,seqc,
      1 seqin,seqco
       character*150 spr1*(n2),spr2*(n2)
       logical*2 sneg(n1),iacc(n3),rlev(n2),rmsf,circ,series,lprop,
-     1 dbrac,arev,kloc,firstr,secstr
-      integer*4 intdat(n4*4),idat(n4,2),ken(n7)
-      real*8 ionc(n2,61,73),gdat(n4,3),hone(0:n2),his3(n6,n6,n6),
+     1 dbrac,ins,outs,acvol,arev,kloc,firstr,secstr
+      integer*4 intdat(n4*4),idat(n4,2),ken(n7),ireg(100000)
+      real*8 ionc(n2,62,73),gdat(n4,3),hone(0:n2),
      1 cpts(800,3),cen(n7,3),vac(n7,3),gcor(3),ions
-      common/axe/vol(n2,61,73),uvw(n1,4,3),hris(n1),nlev,npt
+      common/axe/vol(n2,62,73),uvw(n1,4,3),hris(n1),nlev,npt
       common/bin/shell,grida,gridd,gridr,spa,kpd,kpr,nspl,
      1 idx,irx,iax
       common/bisect/bsx(3)
-      common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
       common/cha/lis,dat,axfrm,solute,prop,type,seq,seqin
+      common/crv/rodat(n1,2)
       common/dat/sris,stwi,grid,alow,ahig,dlow,dhig,rlow,rhig,
-     1 pmin,pmax,itst,itnd,itdel,istep,rmsf,circ,series,dbrac
+     1 clim,pmin,pmax,itst,itnd,itdel,istep,iwin,rmsf,circ,
+     1 series,dbrac,ins,outs,acvol
+      common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
       common/ion/ilib(n3),klis(n3),kisa,nion,inam(n3)
-      common/scr/uint(n5,4,3),usc(6),var(6),theta,dist
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
+      common/siz/his3(n6,n6,n6),xmin,ymin,zmin,idimx,idimy,idimz
 c     NOTE kpd must be an even number
-      data shell,spa,kpd,kpr,nspl/30.0,0.2,6,2,200/
+      data shell,shelx,spa,kpd,kpr,nspl/30.0,32.0,0.2,6,2,200/
 c-----------------------------------------------------------------------
       arev=.false.
+      do i=1,n1
+      do j=1,2
+      rodat(i,j)=0.
+      enddo
+      enddo
       call cpu_time(tstart)
 c-------------------------------------------------------------setup data
       ext=' '
@@ -52,13 +60,14 @@ c-------------------------------------------------------------setup data
       seqin=' '
       sris=3.38
       stwi=34.5
+      clim=0.4
       grid=1.
       alow=0.
       ahig=360.
       dlow=1.
       dhig=500.
       rlow=0.
-      rhig=30.
+      rhig=shell
       pmin=-500.
       pmax=500.
       amaxmol=1.d-10
@@ -67,10 +76,14 @@ c-------------------------------------------------------------setup data
       itnd=0
       itdel=1
       istep=0
+      iwin=0
       rmsf=.false.
       circ=.false.
       series=.false.
       lprop=.false.
+      ins=.true.
+      outs=.true.
+      acvol=.false.
       dbrac=.false.
       gridr=1.d0/kpr
       gridd=1.d0/kpd
@@ -83,6 +96,7 @@ c---------------------------------------------------------input question
       endif 
       if(itst.gt.0.and.itnd.eq.0) itnd=itst
       if(alow.gt.ahig) arev=.true.
+      if(dat.ne.' ') then
       kfi=index(dat,' ')-1
          kex=index(dat,'.')+1
          ext=dat(kex:kfi)
@@ -90,10 +104,35 @@ c---------------------------------------------------------input question
          write(6,*) '---- Need file type for dat ----'
          stop
          endif
+      endif
+      if(iwin.gt.100000) then
+      write(6,*) '---- iwin set to upper limit 100000 ----'
+      iwin=100000
+      endif
+         if(iwin.gt.0) then
+         do i=1,iwin
+         ireg(i)=0
+         enddo
+         endif
       kfl=index(lis,' ')-1
-      open(unit=2,file=dat(:kfi),status='old')
+      if(dat.ne.' ') open(unit=2,file=dat(:kfi),status='old')
       if(series) open(unit=3,file=lis(:kfl)//'.cser',status='new')
       if(istep.gt.0) open(unit=8,file=lis(:kfl)//'.stp',status='new')
+      if(iwin.gt.0) open(unit=9,file=lis(:kfl)//'.win',status='new')
+c--------------------------------------------------------setup for acvol
+      if(acvol) then
+            if(dat.eq.' '.and.seqin.eq.' ') then
+            write(6,*) '---- Need cdi file or seqin for acvol ----'
+            stop
+            endif
+         if(seqin.ne.' ') then
+         nlev=index(seqin,' ')-1
+         nst=2
+         type='*'
+         nion=1
+         goto 40
+         endif
+      endif
 c-------------------------------------------------------initial cub read
       if(ext.eq.'cub'.or.ext.eq.'pts') then
          if(seqin.eq.' ') then
@@ -121,7 +160,7 @@ c-------------------------------------------------------initial cdi read
 4     format(40a4)
       endif
 c-----------------------------------------------------------------------
-      if(dlow.lt.1) dlow=1.
+40    if(dlow.lt.1) dlow=1.
       if(dhig.gt.nlev) then
       if(.not.circ) then
       dhig=nlev
@@ -224,7 +263,6 @@ c----------------------------------------------------------sequence scan
          klow=1+(k+imid-2)*kpd
          endif 
          khig=klow+kpd-1
-         print *,'  kbracket= ',klow,' ',khig,' ',khig-klow+1
       do ip=klow,khig
       i=ip
       if(ip.gt.idx) i=ip-idx
@@ -308,18 +346,23 @@ c--------------------------------------------------------------axis scan
       if(scwt.eq.0) goto 500
 c----------------------------------------------------------zero matrices
       do i=1,nlev*kpd+1
-      do j=1,61
+      do j=1,62
       do k=1,73
       ionc(i,j,k)=0.
       vol(i,j,k)=0.
       enddo
       enddo
       enddo
-c----------------------------------------------------start read property
+c-------------------------------------------------optional read property
       if(prop.ne.' ') then
       lprop=.true.
       kfi=index(prop,' ')-1
       open(unit=4,file=prop(:kfi)//'.ser',status='old')
+      do i=1,nlev
+      read(4,24) val(i)
+24    format(8x,f8.2)
+      enddo
+      close(4)
       endif
 c-------------------------------------------------------read axis frames
       if(axfrm.ne.' ') then
@@ -334,7 +377,14 @@ c-------------------------------------------------------read axis frames
       read(1,32) ((uvw(i,j,k),k=1,3),j=1,4)
 32    format(12f12.7)
       enddo
-      close(1)
+c--------------------------------------------------------read curvature
+      read(1,34,end=35) (rodat(i,1),rodat(i,2),i=1,nlev)
+34    format(2f12.5)
+         do i=1,nlev
+         if(rodat(i,2).lt.0) rodat(i,2)=360.d0+rodat(i,2)
+         enddo
+35    close(1)
+c----------------------------------------------------------------------
       call intaxe
       xmin=0.
       ymin=0.
@@ -359,12 +409,12 @@ c-------------------------------------------------------read axis frames
          uint(i,j,3)=z/r
          enddo
       enddo
-      xmin=xmin-shell
-      xmax=xmax+shell
-      ymin=ymin-shell
-      ymax=ymax+shell
-      zmin=zmin-shell
-      zmax=zmax+shell
+      xmin=xmin-shelx
+      xmax=xmax+shelx
+      ymin=ymin-shelx
+      ymax=ymax+shelx
+      zmin=zmin-shelx
+      zmax=zmax+shelx
 c-------------------------------------------standard helical axis frames
       else
       do i=1,nlev
@@ -391,23 +441,20 @@ c-------------------------------------------standard helical axis frames
          uvw(i,4,3)=(i-1)*sris
          enddo
       call intaxe
-      xmin=-shell
-      xmax= shell
-      ymin=-shell
-      ymax= shell
-      zmin=-shell
-      zmax=(nlev-1)*sris+shell
+      xmin=-shelx
+      xmax= shelx
+      ymin=-shelx
+      ymax= shelx 
+      zmin=-shelx
+      zmax=(nlev-1)*sris+shelx
       endif
-c------------------------------------------------------------read solute
-      if(solute.ne.' ') call solvol(solute)
-c---------------------------------------------------------initial output
-      xsiz=xmax-xmin
-      ysiz=ymax-ymin
-      zsiz=zmax-zmin
-      idimx=int(xsiz/grid)
-      idimy=int(ysiz/grid)
-      idimz=int(zsiz/grid)
-      ishl =int(2*kpr*shell)
+c-------------------------------------------------prepare cartesian grid
+         xsiz=xmax-xmin
+         ysiz=ymax-ymin
+         zsiz=zmax-zmin
+         idimx=int(xsiz/grid)
+         idimy=int(ysiz/grid)
+         idimz=int(zsiz/grid)
          imx=max(idimx,idimy,idimz)
          if(imx.gt.n2) then
          write(6,36) imx
@@ -421,7 +468,13 @@ c---------------------------------------------------------initial output
          enddo
          enddo
          enddo
-
+c------------------------------------------------------------read solute
+         if(solute.ne.' ') call solvol(solute)
+            if(acvol) then
+            call access
+            goto 500
+            endif
+c---------------------------------------------------------initial output
       write(6,38) nlev,nst,nion,seqin(:nlev),
      1 idx,irx,iax,idimx,idimy,idimz,xsiz,ysiz,zsiz
 38    format(/2X,'nlev= ',i3,' nst= ',i3,' nion= ',i3,
@@ -503,15 +556,17 @@ c===============================================================cub read
          bsx(2)=y0
          bsx(3)=z0
          call bisection(ilow,ihig,imin)
-         dx=bsx(1)-uint(imin,4,1)
-         dy=bsx(2)-uint(imin,4,2)
-         dz=bsx(3)-uint(imin,4,3)
-         rmin=sqrt(dx*dx+dy*dy+dz*dz)
-            if(imin.ge.0.and.rmin.lt.rglo) then
+          if(imin.ge.0) then
+          dx=bsx(1)-uint(imin,4,1)
+          dy=bsx(2)-uint(imin,4,2)
+          dz=bsx(3)-uint(imin,4,3)
+          rmin=sqrt(dx*dx+dy*dy+dz*dz)
+            if(rmin.lt.rglo) then
             rglo=rmin
             iglo=imin
             endif
-         endif
+          endif
+         endif 
          enddo
          if(rglo.gt.shell) goto 21
          pos=1+float(iglo-1)/nspl
@@ -583,18 +638,19 @@ c===============================================================pts read
          bsx(2)=y0
          bsx(3)=z0
          call bisection(ilow,ihig,imin)
-         dx=bsx(1)-uint(imin,4,1)
-         dy=bsx(2)-uint(imin,4,2)
-         dz=bsx(3)-uint(imin,4,3)
-         rmin=sqrt(dx*dx+dy*dy+dz*dz)
-            if(imin.ge.0.and.rmin.lt.rglo) then
+          if(imin.ge.0) then
+          dx=bsx(1)-uint(imin,4,1)
+          dy=bsx(2)-uint(imin,4,2)
+          dz=bsx(3)-uint(imin,4,3)
+          rmin=sqrt(dx*dx+dy*dy+dz*dz)
+            if(rmin.lt.rglo) then
                rglo=rmin
                iglo=imin
             endif
+          endif
          endif
          enddo
          if(rglo.gt.shell) goto 51
-c        if(rglo.gt.shell.or.iglo.eq.1.or.iglo.eq.npt) goto 51
          pos=1+float(iglo-1)/nspl
          rad=rglo
          vx=(x0-uint(iglo,4,1))/rglo
@@ -669,9 +725,6 @@ c===============================================================cdi read
                endif
             endif
             enddo
-c---------------------------------------------------optionally read prop
-      if(lprop) read(4,24) (val(i),i=1,nlev)
-24    format(8x,450f8.2)
 c-------------------------------------------------generate ion positions
       icount=0
       do i=1,kisa
@@ -736,6 +789,25 @@ c-----------------------------------------------------------------------
       if(icount.lt.mincount) mincount=icount
       if(icount.gt.maxcount) maxcount=icount
       if(series) write(3,26) kseen,icount
+c---------------------------------------------sliding window populations
+      if(iwin.gt.0) then
+      ipos=mod(ksnap,iwin)
+      if(ipos.eq.0) ipos=iwin
+      iold=ireg(ipos)
+      ireg(ipos)=icount
+         if(ksnap.eq.iwin) then
+         sum=0.d0
+         do m=1,iwin
+         sum=sum+ireg(m)
+         enddo
+         sum=sum/iwin
+         write(9,37) ksnap-iwin/2,sum
+            else if(ksnap.gt.iwin) then
+            sum=sum+float(ireg(ipos)-iold)/iwin
+            write(9,37) ksnap-iwin/2,sum
+            endif
+      endif
+c-----------------------------------------------------------------------
       if(istep.gt.0.and.mod(ksnap,istep).eq.0) write(8,37) ksnap,
      1 tot/ksnap
       goto 20 ! loop to next snapshot
@@ -753,7 +825,7 @@ c=================================================================output
 85    format(/2x,' Vsolv= ',f8.1,' Vsolu= ',f8.1)
 9     format(2x,' Snaps= ',i8,' <Ions>= ',f7.2,
      1 ' <Molarity>= ',f7.2,
-     1 ' max(Molarity)= ',f8.1,' min(Molarity)= ',f8.1)
+     1 ' max_M= ',f8.1,' min_M= ',f8.1)
       call cpu_time(tend)
       write(6,30) tend-tstart
 30    format(/2x,'Time for run: ',f7.1,' sec')
@@ -922,23 +994,8 @@ c---------------------------------------------------------------------RA
       write(3,14) (hone(k),k=1,iax)
       enddo
       close(3)
-c--------------------------------------------------------------------DRA
-c     open(unit=3,file=lis(:kfl)//'.dra',status='new')
-c     do j=1,irx
-c     do k=1,iax
-c     do i=1,idx
-c     if(vol(i,j,k).gt.0.) then
-c     hone(i)=ionc(i,j,k)/(vol(i,j,k)*denref*ksnap)
-c        else
-c        hone(i)=0.
-c        endif
-c     enddo
-c     write(3,14) (hone(i),i=1,idx)
-c     enddo
-c     enddo
-c     close(3)
 c--------------------------------------------------------------cartesian
-      if(ext.ne.'cub') then
+120   if(ext.ne.'cub') then
       facv=denref*ksnap*grid**3
       open(unit=3,file=lis(:kfl)//'.cub',status='new')
       write(3,5) dat(:kfi)
@@ -965,23 +1022,24 @@ c=======================================================================
       subroutine nml
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
-      parameter (n_real=11,n_int=4,n_log=4,n_cha=8,n_tot=27)
-      character*148 lis,dat,axfrm,solute,prop,type,seq,seqin,vc(n_cha)
-      character lini*150,input(n_tot)*10,lj*1
-      logical*2 rmsf,circ,series,dbrac,vo(n_log),iflag(n_tot),
-     1 finml,lanml,start
+      parameter (n_real=12,n_int=5,n_log=7,n_cha=8,n_tot=32)
+      character*128 lis,dat,axfrm,solute,prop,type,seq,seqin,vc(n_cha)
+      character lini*200,input(n_tot)*10,lj*1
+      logical*2 rmsf,circ,series,dbrac,ins,outs,acvol,vo(n_log),
+     1 iflag(n_tot),finml,lanml,start
       integer*4 first,last,skip,vi(n_int),nmls(n_tot)
       dimension vr(n_real)
       common/cha/lis,dat,axfrm,solute,prop,type,seq,seqin
       common/dat/sris,stwi,grid,alow,ahig,dlow,dhig,rlow,rhig,
-     1 pmin,pmax,itst,itnd,itdel,istep,rmsf,circ,series,dbrac
+     1 clim,pmin,pmax,itst,itnd,itdel,istep,iwin,rmsf,circ,
+     1 series,dbrac,ins,outs,acvol
       equivalence (vc(1),lis),(vr(1),sris),(vi(1),itst),
      1 (vo(1),rmsf)
 c-----------------------------------------------------------------------
       data input/'sris','stwi','grid','alow','ahig','dlow','dhig',
-     & 'rlow','rhig','pmin','pmax',
-     & 'itst','itnd','itdel','istep',
-     & 'rmsf','circ','series','dbrac',
+     & 'rlow','rhig','clim','pmin','pmax',
+     & 'itst','itnd','itdel','istep','iwin',
+     & 'rmsf','circ','series','dbrac','ins','outs','acvol',
      & 'lis','dat','axfrm','solute','prop','type','seq','seqin'/
       ninr=n_int+n_real
       nlog=n_log+ninr
@@ -998,7 +1056,7 @@ c-----------------------------------------------------------------------
       if(.not.finml) lanml=.true.
       if(finml.and.index(lini(im+1:),'&').ne.0) lanml=.true.
       endif
-      do k=1,150
+      do k=1,200
       if(lini(k:k).eq.'=') then
       kl=k
       start=.true.
@@ -1010,6 +1068,9 @@ c-----------------------------------------------------------------------
       else if(.not.start.and.(lj.eq.' '.or.lj.eq.',')) then
       jl=j+1
       goto 15
+      else if(j.eq.1) then
+      jl=j
+      goto 15
       endif
       enddo
       goto 50
@@ -1018,7 +1079,7 @@ c-----------------------------------------------------------------------
          iflag(i)=.true.
 17          kl=kl+1
             if(lini(kl:kl).eq.' ') goto 17
-            do j=kl,100
+            do j=kl,200
             lj=lini(j:j)
             if(lj.eq.' '.or.lj.eq.','.or.lj.eq.'&') then
             kh=j-1
@@ -1055,7 +1116,7 @@ c-----------------------------------------------------------------output
       write(6,200) 
 200   format(
      1/5x,'***************************************',
-     1/5x,'****  CANION   Version 3.0 4/2014  ****',
+     1/5x,'****  CANION  Version 3.5 10/2016  ****',
      1/5x,'***************************************'//)
       do i=1,n_tot
       nm=nmls(i)
@@ -1089,7 +1150,7 @@ c=======================================================================
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
       parameter(n1=200,n5=45000)
-      common/scr/uint(n5,4,3),usc(6),var(6),theta,dist
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
       common/bisect/bsx(3)
       dx=bsx(1)-uint(m,4,1)
       dy=bsx(2)-uint(m,4,2)
@@ -1134,155 +1195,13 @@ c decide which edge of step with root
       write(6,*) 'Too many iterations in routine "bisection"'
       end
 c=======================================================================
-      subroutine intaxe
-      implicit integer*4 (i-n)
-      implicit real*8 (a-h,o-z)
-      parameter (cdr=0.017453293d0,crd=57.29577951d0,cba=0.529177249d0)
-      parameter(n1=200,n2=1200,n5=45000)
-      dimension fra(2,4,3)
-      logical*2 rmsf,circ,series,lprop,arev
-      dimension r1(4,3),r2(4,3),t(3,3),dr(3),v(3)
-      common/axe/vol(n2,61,73),uvw(n1,4,3),hris(n1),nlev,npt
-      common/bin/shell,grida,gridd,gridr,spa,kpd,kpr,nspl,
-     1 idx,irx,iax
-      common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
-      common/dat/sris,stwi,grid,alow,ahig,dlow,dhig,rlow,rhig,
-     1 pmin,pmax,itst,itnd,itdel,istep,rmsf,circ,series,dbrac
-      common/scr/uint(n5,4,3),usc(6),var(6),theta,dist
-      n=0
-      irej=0
-      voltot=0.
-      iup=nlev
-      if(circ) iup=nlev+1
-      do i=2,iup
-      iu=i
-      il=iu-1
-      if(i.gt.nlev) iu=1
-            do m=1,4
-            do j=1,3
-            r1(m,j)=uvw(il,m,j)
-            r2(m,j)=uvw(iu,m,j)
-            enddo
-            enddo
-            do j=1,3
-            v(j)=r2(4,j)-r1(4,j)
-            enddo
-            call screw(r1,r2,0)
-            proj=v(1)*usc(1)+v(2)*usc(2)+v(3)*usc(3)
-            hris(il)=var(3) 
-      mup=nspl-1
-      if(i.eq.iup) mup=mup+1
-c-------------------------------------------generate intermediate points
-      do k=0,mup
-      fth=theta*k/nspl
-      fle=proj*k/nspl
-      st=dsin(fth)
-      ct=dcos(fth)
-      cm=ct-1
-      t(1,1)= ct       -cm*usc(1)*usc(1)
-      t(1,2)=-st*usc(3)-cm*usc(1)*usc(2)
-      t(1,3)= st*usc(2)-cm*usc(1)*usc(3)
-      t(2,1)= st*usc(3)-cm*usc(2)*usc(1)
-      t(2,2)= ct       -cm*usc(2)*usc(2)
-      t(2,3)=-st*usc(1)-cm*usc(2)*usc(3)
-      t(3,1)=-st*usc(2)-cm*usc(3)*usc(1)
-      t(3,2)= st*usc(1)-cm*usc(3)*usc(2)
-      t(3,3)= ct       -cm*usc(3)*usc(3)
-         do j=1,3
-         dr(j)=r1(4,j)-usc(j+3)
-         enddo
-      n=n+1
-      do j=1,3
-      uint(n,1,j)=r1(1,1)*t(j,1)+r1(1,2)*t(j,2)+r1(1,3)*t(j,3)
-      uint(n,2,j)=r1(2,1)*t(j,1)+r1(2,2)*t(j,2)+r1(2,3)*t(j,3)
-      uint(n,3,j)=r1(3,1)*t(j,1)+r1(3,2)*t(j,2)+r1(3,3)*t(j,3)
-      uint(n,4,j)=  dr(1)*t(j,1)  +dr(2)*t(j,2)  +dr(3)*t(j,3)
-     1            +usc(j+3)+fle*usc(j)
-      enddo
-      enddo ! k points
-c--------------------------------------------------------tangent v and u
-      i1=(il-1)*nspl+25
-      i2=i1+1
-      i3=i1+2
-      dx=uint(i3,4,1)-uint(i1,4,1)
-      dy=uint(i3,4,2)-uint(i1,4,2)
-      dz=uint(i3,4,3)-uint(i1,4,3)
-      r=sqrt(dx*dx+dy*dy+dz*dz)
-      dx=dx/r
-      dy=dy/r
-      dz=dz/r
-      vz=uint(i2,3,1)*dx+uint(i2,3,2)*dy+uint(i2,3,3)*dz
-      dot=dx*usc(1)+dy*usc(2)+dz*usc(3)
-      un=(theta/proj)*dot
-      unx=usc(1)*un
-      uny=usc(2)*un
-      unz=usc(3)*un
-      ux=  uint(i2,2,1)*unx+uint(i2,2,2)*uny+uint(i2,2,3)*unz
-      uy=-(uint(i2,1,1)*unx+uint(i2,1,2)*uny+uint(i2,1,3)*unz)
-c-------------------------------------------------generate micro volumes
-      dx=r1(4,1)-usc(4)
-      dy=r1(4,2)-usc(5)
-      dz=r1(4,3)-usc(6)
-      dot=dx*usc(1)+dy*usc(2)+dZ*usc(3)
-      dx=dx-dot*usc(1)
-      dy=dy-dot*usc(2)
-      dz=dz-dot*usc(3)
-      rh2=dx*dx+dy*dy+dz*dz
-      dels=theta*sqrt((proj/theta)**2+rh2)/kpd
-      delt=cdr/spa
-      delr=1.d0/kpr
-      do j=1,shell*kpr
-      rad=(j-0.5)/kpr
-      if(rad.lt.rlow.or.rad.ge.rhig) goto 21
-      rad1=rad-delr/2
-      rad2=rad1+delr
-      del2r=rad2**2-rad1**2
-      del3r=(rad2**3-rad1**3)/3.d0
-         do k=1,360*spa
-         the1=(k-1)/spa
-         the2=k/spa
-         the=(the1+the2)/2
-         if(.not.arev) then
-         if(the.lt.alow.or.the.ge.ahig) goto 31
-            else
-            if(the.ge.ahig.and.the.lt.alow) goto 31
-            endif
-         the=the*cdr
-         tst=rad*(uy*cos(the)-ux*sin(the))
-         if(tst.lt.vz) then
-         the1=the1*cdr
-         the2=the2*cdr
-         uterm=ux*(cos(the2)-cos(the1))+uy*(sin(the2)-sin(the1))
-         volume=dels*(delt*del2r*vz/2-del3r*uterm)
-            else
-            irej=irej+1
-            volume=0.
-            endif
-         ihig=ilow+(kpd-1)
-         do m=1,kpd
-         id=(il-1)*kpd+m
-         if(level(id).ne.0) then
-         if(.not.lprop.or.(val(il).ge.pmin.and.val(il).le.pmax)) then
-         vol(id,j,k)=volume
-         voltot=voltot+volume
-         endif
-         endif
-         enddo
-31       enddo
-21    enddo
-c-----------------------------------------------------------------------
-      enddo ! i levels
-      npt=n
-      return
-      end
-c=======================================================================
       subroutine screw(r1,r2,key)
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
-      parameter (pi=3.141592654d0,crd=57.29577951d0,n1=450,n5=45000)
-      dimension rsc(3),r1(4,3),r2(4,3),urot(4,3),t(3,3),q(3,3),
-     1 w(3),v(3),scw(3),a(3,3)
-      common/scr/uint(n5,4,3),usc(6),var(6),theta,dist
+      parameter (pi=3.141592654d0,crd=57.29577951d0,n5=45000)
+      dimension rsc(3),r1(4,3),r2(4,3),t(3,3),q(3,3),w(3),v(3),
+     1 scw(3),a(3,3)
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
       do j=1,3
       v(j)=r2(4,j)-r1(4,j)
       enddo
@@ -1379,6 +1298,180 @@ c--------------------------------------------------------------transform
       return
       end
 c=======================================================================
+      subroutine intaxe
+      implicit integer*4 (i-n)
+      implicit real*8 (a-h,o-z)
+      parameter (cdr=0.017453293d0,crd=57.29577951d0,cba=0.529177249d0)
+      parameter(n1=200,n2=1200,n5=45000)
+      logical*2 rmsf,circ,series,lprop,arev,dbrac,ins,outs,acvol
+      dimension r1(4,3),r2(4,3),t(3,3),dr(3),v(3),usave(6)
+      common/axe/vol(n2,62,73),uvw(n1,4,3),hris(n1),nlev,npt
+      common/bin/shell,grida,gridd,gridr,spa,kpd,kpr,nspl,
+     1 idx,irx,iax
+      common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
+      common/dat/sris,stwi,grid,alow,ahig,dlow,dhig,rlow,rhig,
+     1 clim,pmin,pmax,itst,itnd,itdel,istep,iwin,rmsf,circ,
+     1 series,dbrac,ins,outs,acvol
+      common/crv/rodat(n1,2)
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
+c-----------------------------------------------------------------------
+      n=0
+      mx=nspl/kpd
+      iup=nlev
+      if(circ) iup=nlev+1
+      do i=2,iup
+      iu=i
+      il=iu-1
+      if(i.gt.nlev) iu=1
+            do m=1,4
+            do j=1,3
+            r1(m,j)=uvw(il,m,j)
+            r2(m,j)=uvw(iu,m,j)
+            enddo
+            enddo
+            do j=1,3
+            v(j)=r2(4,j)-r1(4,j)
+            enddo
+            call screw(r1,r2,0)
+            proj=v(1)*usc(1)+v(2)*usc(2)+v(3)*usc(3)
+c-------------------------------------------generate intermediate points
+      mup=nspl-1
+      if(i.eq.iup.and..not.circ) mup=mup+1
+      do k=0,mup
+      fth=theta*k/nspl
+      fle=proj*k/nspl
+      st=dsin(fth)
+      ct=dcos(fth)
+      cm=ct-1
+      t(1,1)= ct       -cm*usc(1)*usc(1)
+      t(1,2)=-st*usc(3)-cm*usc(1)*usc(2)
+      t(1,3)= st*usc(2)-cm*usc(1)*usc(3)
+      t(2,1)= st*usc(3)-cm*usc(2)*usc(1)
+      t(2,2)= ct       -cm*usc(2)*usc(2)
+      t(2,3)=-st*usc(1)-cm*usc(2)*usc(3)
+      t(3,1)=-st*usc(2)-cm*usc(3)*usc(1)
+      t(3,2)= st*usc(1)-cm*usc(3)*usc(2)
+      t(3,3)= ct       -cm*usc(3)*usc(3)
+         do j=1,3
+         dr(j)=r1(4,j)-usc(j+3)
+         enddo
+      n=n+1
+      do j=1,3
+      uint(n,1,j)=r1(1,1)*t(j,1)+r1(1,2)*t(j,2)+r1(1,3)*t(j,3)
+      uint(n,2,j)=r1(2,1)*t(j,1)+r1(2,2)*t(j,2)+r1(2,3)*t(j,3)
+      uint(n,3,j)=r1(3,1)*t(j,1)+r1(3,2)*t(j,2)+r1(3,3)*t(j,3)
+      uint(n,4,j)=  dr(1)*t(j,1)  +dr(2)*t(j,2)  +dr(3)*t(j,3)
+     1            +usc(j+3)+fle*usc(j)
+      enddo
+      enddo ! k points
+      enddo ! i levels
+      npt=n
+c------------------------------------------------------determine volumes
+      irej=0
+      voltot=0.
+      do i=2,iup
+      iu=i
+      il=iu-1
+      if(i.gt.nlev) iu=1
+            do m=1,4
+            do j=1,3
+            r1(m,j)=uvw(il,m,j)
+            r2(m,j)=uvw(iu,m,j)
+            enddo
+            enddo
+            do j=1,3
+            v(j)=r2(4,j)-r1(4,j)
+            enddo
+            call screw(r1,r2,1)
+            proj=v(1)*usc(1)+v(2)*usc(2)+v(3)*usc(3)
+            hris(il)=var(3) 
+            tsave=theta
+            do j=1,6
+            usave(j)=usc(j)
+            enddo
+c--------------------------------------------------------tangent v and u
+      i1=(il-1)*nspl+25
+      i2=i1+1
+      i3=i1+2
+      dx=uint(i3,4,1)-uint(i1,4,1)
+      dy=uint(i3,4,2)-uint(i1,4,2)
+      dz=uint(i3,4,3)-uint(i1,4,3)
+      r=sqrt(dx*dx+dy*dy+dz*dz)
+      dx=dx/r
+      dy=dy/r
+      dz=dz/r
+      vz=uint(i2,3,1)*dx+uint(i2,3,2)*dy+uint(i2,3,3)*dz
+      dot=dx*usave(1)+dy*usave(2)+dz*usave(3)
+      un=(tsave/proj)*dot
+      unx=usc(1)*un
+      uny=usc(2)*un
+      unz=usc(3)*un
+      ux=  uint(i2,2,1)*unx+uint(i2,2,2)*uny+uint(i2,2,3)*unz
+      uy=-(uint(i2,1,1)*unx+uint(i2,1,2)*uny+uint(i2,1,3)*unz)
+c-------------------------------------------------generate micro volumes
+      dx=r1(4,1)-usave(4)
+      dy=r1(4,2)-usave(5)
+      dz=r1(4,3)-usave(6)
+      dot=dx*usave(1)+dy*usave(2)+dz*usave(3)
+      dx=dx-dot*usave(1)
+      dy=dy-dot*usave(2)
+      dz=dz-dot*usave(3)
+      rh2=dx*dx+dy*dy+dz*dz
+      dels=tsave*sqrt((proj/tsave)**2+rh2)/kpd
+      delt=cdr/spa
+      delr=1.d0/kpr
+      do j=1,shell*kpr ! radius steps
+      rad=(j-0.5)/kpr
+      if(rad.lt.rlow.or.rad.ge.rhig) goto 21
+      rad1=rad-delr/2
+      rad2=rad1+delr
+      del2r=rad2**2-rad1**2
+      del3r=(rad2**3-rad1**3)/3.d0
+         do k=1,360*spa ! angle steps
+         the1=(k-1)/spa
+         the2=k/spa
+         the=(the1+the2)/2
+         thed=the
+            if(rodat(il,1).ge.clim) then
+            dan=abs(rodat(il,2)-the)
+            danrl=dan
+            if(dan.gt.180) dan=360.-dan
+            if(.not.ins.and..not.outs) goto 31
+            if(.not.ins.and.dan.lt.90.) goto 31
+            if(.not.outs.and.dan.ge.90.) goto 31
+               else
+               if(ins.neqv.outs) goto 31
+               endif
+         if(.not.arev) then
+         if(the.lt.alow.or.the.ge.ahig) goto 31
+            else
+            if(the.ge.ahig.and.the.lt.alow) goto 31
+            endif
+         the=the*cdr
+         tst=rad*(uy*cos(the)-ux*sin(the))
+         if(tst.lt.vz) then
+         the1=the1*cdr
+         the2=the2*cdr
+         uterm=ux*(cos(the2)-cos(the1))+uy*(sin(the2)-sin(the1))
+         volume=dels*(delt*del2r*vz/2-del3r*uterm)
+            else
+            irej=irej+1
+            volume=0.
+            endif
+         do m=1,kpd ! sublevel steps
+         id=(il-1)*kpd+m
+         if(level(id).eq.0) goto 41
+         if(lprop.and.(val(il).lt.pmin.or.val(il).gt.pmax)) goto 41
+         vol(id,j,k)=volume
+         voltot=voltot+volume
+41       enddo ! m sublevels
+31       enddo ! k angle steps
+21    enddo ! j radius steps
+c-----------------------------------------------------------------------
+      enddo ! i levels
+      return
+      end
+c=======================================================================
       subroutine findaxis(A, eps, dta, m, gamma, x1, it)
       integer i, it, m, n
       real*8 gamma
@@ -1431,14 +1524,14 @@ c=======================================================================
       parameter(n1=200,n2=1200,n5=45000,n8=8000)
       logical*2 sneg(n1),lprop,arev
       character*4 mnam(n8),munit(n8),name,mcha(n8)*1
-      character*148 solute
+      character*128 solute
       character*80 line
       dimension corm(n8,3),vdw(5),nunit(n8),inx(n8)
-      common/axe/vol(n2,61,73),uvw(n1,4,3),hris(n1),nlev,npt
+      common/axe/vol(n2,62,73),uvw(n1,4,3),hris(n1),nlev,npt
       common/bin/shell,grida,gridd,gridr,spa,kpd,kpr,nspl,
      1 idx,irx,iax
       common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
-      common/scr/uint(n5,4,3),usc(6),var(6),theta,dist
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
       data vdw/1.2,1.6,1.5,1.4,1.9/
       soltot=0.
 c------------------------------------------------------------read solute
@@ -1509,5 +1602,97 @@ c---------------------------------------------------define solute volume
 51    enddo !...k
       enddo !...j
       enddo !...i
+      return
+      end
+c=======================================================================
+      subroutine access
+      implicit integer*4 (i-n)
+      implicit real*8 (a-h,o-z)
+      parameter (cdr=0.017453293d0,crd=57.29577951d0,pi=3.141592654,
+     1 cba=0.529177249d0)
+      parameter(n1=200,n2=1200,n5=45000,n6=501)
+      logical*2 rmsf,circ,series,lprop,arev,dbrac,ins,outs,acvol
+      character*128 lis,dat,axfrm,solute,prop,type,seq,seqin
+      common/axe/vol(n2,62,73),uvw(n1,4,3),hris(n1),nlev,npt
+      common/bin/shell,grida,gridd,gridr,spa,kpd,kpr,nspl,
+     1 idx,irx,iax
+      common/cha/lis,dat,axfrm,solute,prop,type,seq,seqin
+      common/dat/sris,stwi,grid,alow,ahig,dlow,dhig,rlow,rhig,
+     1 clim,pmin,pmax,itst,itnd,itdel,istep,iwin,rmsf,circ,
+     1 series,dbrac,ins,outs,acvol
+      common/exr/val(n1),voltot,soltot,level(n2),irej,lprop,arev
+      common/scr/uint(n5,4,3),urot(4,3),usc(6),var(6),theta,dist
+      common/siz/his3(n6,n6,n6),xmin,ymin,zmin,idimx,idimy,idimz
+         nran=20000000
+         iseed=12345
+         a=rand(iseed)
+      iup=nlev
+      if(circ) iup=nlev+1
+      pmax=iup-1.
+      rmax=rhig
+      amax=2*pi
+      do i=1,nran
+      pos=pmax*rand()
+      rad=rmax*rand()
+      ang=amax*rand()
+      ang3=ang*crd
+c-----------------------------------------helical coord. hist.
+      id=min(1+int(pos/gridd),idx)
+      ir=min(1+int(rad/gridr),irx)
+      ia=min(1+int(ang3/grida),iax)
+      if(vol(id,ir,ia).le.0.) goto 25
+c----------------------------------------------------------3D with frame
+      imin=1+nint(pos*nspl)
+      rx=uint(imin,3,1)
+      ry=uint(imin,3,2)
+      rz=uint(imin,3,3)
+      ca=cos(ang)
+      sa=sin(ang)
+      xx=rad*uint(imin,2,1)
+      yy=rad*uint(imin,2,2)
+      zz=rad*uint(imin,2,3)
+      gx=(rx*rx+(1-rx*rx)*ca)*xx+(rx*ry*(1-ca)-rz*sa)*yy+
+     1   (rx*rz*(1-ca)+ry*sa)*zz+uint(imin,4,1)
+      gy=(rx*ry*(1-ca)+rz*sa)*xx+(ry*ry+(1-ry*ry)*ca)*yy+
+     1   (ry*rz*(1-ca)-rx*sa)*zz+uint(imin,4,2)
+      gz=(rx*rz*(1-ca)-ry*sa)*xx+(ry*rz*(1-ca)+rx*sa)*yy+
+     1   (rz*rz+(1-rz*rz)*ca)*zz+uint(imin,4,3)
+c------------------------------------------------------Cartesian coords.
+      ix=1+int((gx-xmin)/grid)
+      if(ix.lt.1.or.ix.gt.idimx) goto 25
+      iy=1+int((gy-ymin)/grid)
+      if(iy.lt.1.or.iy.gt.idimy) goto 25
+      iz=1+int((gz-zmin)/grid)
+      if(iz.lt.1.or.iz.gt.idimz) goto 25
+      his3(ix,iy,iz)=1.
+25    enddo ! random pts.
+c     enddo
+c     enddo
+c-----------------------------------------------------------------output
+      kfl=index(lis,' ')-1
+      open(unit=3,file=lis(:kfl)//'_s.cub',status='new')
+      write(3,5) dat(:kfl)
+5     format(a)
+      write(3,5) 'density inform'
+      write(3,16) 0,(xmin+grid/2)/cba,(ymin+grid/2)/cba,
+     1 (zmin+grid/2)/cba
+      write(3,16) idimx,grid/cba,0.,0.
+      write(3,16) idimy,0.,grid/cba,0.
+      write(3,16) idimz,0.,0.,grid/cba
+16    format(i4,3f10.3)
+         do i=1,idimx
+         do j=1,idimy
+         write(3,18) (his3(i,j,k),k=1,idimz)
+18       format(6e13.5)
+         enddo
+         enddo
+      close(3)
+      do i=1,idimx
+      do j=1,idimy
+      do k=1,idimz
+      his3(i,j,k)=0.
+      enddo
+      enddo
+      enddo
       return
       end

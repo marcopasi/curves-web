@@ -1,47 +1,55 @@
       program Canal
 c***********************************************************************
-c***** Analysis of Curves+ .cda files   Ver 1.3  R.L./K.Z. 9/2014 ******
+c***** Analysis of Curves+ .cda files   Ver 1.5  R.L./K.Z. 9/2016 ******
 c                                                                      *
 c      Ver 1.2 -> 1.3:                                                 *
 c        - implemented circular correlation formulae                   *
 c          (see doi: 10.1093/nar/gku855);                              *
 c        - added NA to output, with string selection (nastr)           *
+c      Ver 1.4                                                         *
+c        - added analysis of magnitude and direction of curvature      *
+c                                                                      *
+c      Ver 1.5                                                         *
+c        - added option to filter input snapshots using a I/P value    *
+c        - simplified namelist input and changed file name length      *
 c                                                                      *
 c***********************************************************************
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
       parameter(
-     & n1=10250, !...maximum number of variables to print (kvar)
+     & n1=10750, !...maximum number of variables to print (kvar)
      & n2=250,   !...maximum number of base pair levels
      & n3=1800,  !...bins for stocking fine histogram (0.1° / 0.01 ang)
-     & n4=41,    !...number of variables per level in Cur+ record
-     & n5=100)   !...maximum number of bins in O/P histogram
+     & n4=43,    !...number of variables per level in Cur+ record
+     & n5=100,   !...maximum number of bins in O/P histogram
+     & n6=1000)  !...maximum sliding window width in snapshots
       parameter (cdr=0.017453293d0,crd=57.29577951d0)
-      character*48 lis,seq,sline(100)*482,fils*48,nastr
+      character*128 lis,seq,prop,nastr,sline(100)*482
       character line*482,watson*452,crick*452,olin*48,list(4)*12,
      & key(0:n4)*8,base(14)*1,name*9,namv(0:n1)*9,cstor(0:450)*8,
      & lwat*1,lcrk*1,sugt(10)*4,str1*4,str2*4,slev*3,plev*3,strand*1,
      & selin*48
-      logical*2 corr,series,histo,start,seen,even,
+      logical*2 corr,series,histo,start,seen,even,lprop,
      & fop(0:n4),flag(0:n1),range(0:n1,360),ansi,ansj,opened
       integer*4 intdat(n4*n2),lkey(0:n4),kang(0:n4),lenv(0:n1),lev(n2),
      & hstor(0:n1,n5),hist(0:n1,-n3:n3),hsum(0:n1),ks(0:n1),kl(0:n1),
      & kv(0:n1),kstor(0:n1),hfac(0:n4),nbin(0:n4),nlist(4),hmin,hmax
-      real*8 cssum(0:n1,2),sum(0:n1),sums(0:n1),
-     & sumsq(0:n1),smean(0:n1),vave(0:n1),vdev(0:n1),
-     & vmin(0:n1),vmax(0:n1),vstor(0:n1),
-     & csval(0:n1,2),smeancs(0:n1,2),
-     & cs2sum(0:n1,2),deltacs(2)
+      real*8 cssum(0:n1,2),sum(0:n1),sums(0:n1),sumsq(0:n1),smean(0:n1),
+     & vave(0:n1),vdev(0:n1),vmin(0:n1),vmax(0:n1),
+     & csval(0:n1,2),smeancs(0:n1,2),cs2sum(0:n1,2),deltacs(2)
       real*4 xcssum(0:n1,0:n1,2,2)
-      real*4 bpdat(n2,n4),row(10),delta(0:n1),hstr(0:n4),
-     & bin(0:n1,10),val(n2)
-      common/cha/lis,seq,nastr
-      common/dat/cormin,lev1,lev2,itst,itnd,itdel,corr,series,
-     & histo
+      real*4 bpdat(n2,n4),row(10),delta(0:n1),hstr(0:n4),vstor(0:n1),
+     & bin(0:n1,10)
+      common/cha/lis,seq,prop,nastr
+      common/dat/pmin,pmax,cormin,clim,lev1,lev2,itst,itnd,itdel,
+     & iwin,corr,series,histo
+      common/sld/vsum(n2),vold(n2),vcur(n6,n2),vreg(n2),volc(n2),
+     & vols(n2),vsuc(n2),vsus(n2),vrec(n6,n2),vres(n6,n2)
       data key/'tbend',
      & 'shear','stretch','stagger','buckle','propel','opening',
      & 'xdisp','ydisp','inclin','tip','ax-bend',
      & 'shift','slide','rise','tilt','roll','twist','h-ris','h-twi',
+     & 'curv','reg',
      & 'alpha','beta','gamma','delta','epsil','zeta',
      &  'chi','phase','amp',
      & 'alpha','beta','gamma','delta','epsil','zeta',
@@ -49,7 +57,7 @@ c***********************************************************************
      & 'minw','mind','majw','majd'/
       data sugt/'C3''n','C4''x','O1''n','C1''x','C2''n',
      &          'C3''x','C4''n','O1''x','C1''n','C2''x'/
-      data kang/1,0,0,0,1,1,1,0,0,1,1,1,0,0,0,1,1,1,0,1,18*1,4*0/
+      data kang/1,0,0,0,1,1,1,0,0,1,1,1,0,0,0,1,1,1,0,1,0,1,18*1,4*0/
       data base/'A','T','G','C','R','Y','*',
      &          'T','A','C','G','Y','R','*'/
       data list/'trajectory','trajectories','level','levels'/
@@ -57,32 +65,47 @@ c***********************************************************************
 c-------------------------------------------------------------setup data
       lis=' '
       seq=' '
-      nastr='NA'
+      prop=' '
+      nastr='  NaN'
+      pmin=-500.
+      pmax=500.
       cormin=0.6
+      clim=0.4
       lev1=0
       lev2=0
       itst=0
       itnd=0
       itdel=1
+      iwin=1000
       corr=.false.
       series=.false.
       histo=.false.
+      ksbin=0
+      lprop=.false.
          do i=0,n4
          j=index(key(i),' ')-1
          lkey(i)=j
          fop(i)=.false.
          enddo
          lenv(0)=lkey(0)
-      ksbin=0
 c---------------------------------------------------------input question
       call nml
+      kfi=index(lis,' ')-1
       lseq=index(seq,' ')-1
+      if(prop.ne.' ') then
+      kfp=index(prop,' ')-1
+      open(unit=1,file=prop(:kfp),status='old')
+      lprop=.true.
+      endif
+         if(iwin.gt.n6) then
+         iwin=1000
+         write(6,59)
+59       format(/2x,'---- iwin reset to upper limit of 1000 ----'/)
+         endif
       even=.false.
       if(lseq.gt.0.and.mod(lseq,2).eq.0) even=.true.
       if(itst.gt.0.and.itnd.eq.0) itnd=itst
-      do i=index(nastr,' '),8
-       nastr=' '//nastr
-      enddo
+      if(itst.eq.0) itst=1
       
       length=0
       klin=0
@@ -102,8 +125,16 @@ c---------------------------------------------------------input question
       klin=klin+1
       sline(klin)=line
       goto 1
+c----------------------------------------------------sliding window prep
+2        do i=1,n2
+         do j=1,iwin
+         vcur(j,i)=0.
+         vrec(j,i)=0.
+         vres(j,i)=0.
+         enddo
+         enddo
 c---------------------------------------------------prepare data storage
-2     itlev=0
+      itlev=0
       ittrj=0
       if(lev1.gt.0.and.lev2.eq.0) lev2=lev1
       if(lev1.eq.0) lev1=1
@@ -155,8 +186,8 @@ c------------------------------------------------------choice protection
       if(klin.gt.1) then
       series=.false.
       corr=.false.
-48    format(/2x,'Series & corr impossible: ',a64)
       write(6,48) 'multiple trajectories'
+48    format(/2x,'Series & corr impossible: ',a64)
       endif
 c--------------------------------------------------------find input data
       kln=0
@@ -238,14 +269,14 @@ c--------------------------------------------------------------read data
       inquire(unit=2,opened=opened)
       if(opened) close(2)
       open(unit=2,file=olin(:ibl),status='old')
-c     read(2,22) nold,nsto,ntoro,jtot,klig
-c     if(nold.ne.length) stop '  ---- I/P seq length incompatible ----'
 20    read(2,22,end=50) (intdat(i),i=1,n4*length+1)
 22    format(200i6)
       kseen=kseen+1
+      if(lprop) read(1,*) val
+      if(val.lt.pmin.or.val.gt.pmax) goto 20
       if(kseen.lt.itst.and.itst.gt.0) goto 20
       if(kseen.gt.itnd.and.itnd.gt.0) goto 50
-      if(mod(kseen-1,itdel).ne.0) goto 20
+      if(mod(kseen-itst,itdel).ne.0) goto 20
       ksnap=ksnap+1
             k=0
             do i=1,length
@@ -265,10 +296,10 @@ c------------------------------------------------start loop on variables
       if(iv.le.1.and.i.gt.n4) ivl=ivl+1
       kfn=lkey(iv)
       namv(i)=key(iv)
-      if(iv.ge.20.and.iv.le.28) then
+      if(iv.ge.22.and.iv.le.30) then
       kfn=kfn+1
       namv(i)(kfn:)='W'
-         else if(iv.ge.29.and.iv.le.37) then
+         else if(iv.ge.31.and.iv.le.39) then
          kfn=kfn+1
          namv(i)(kfn:)='C'
          endif
@@ -292,8 +323,8 @@ c------------------------------------------------start loop on variables
          if(iv.ge.12.and.iv.le.19) ishf=-1
          if(iv.eq.1.or.iv.eq.4.or.iv.eq.8.or.iv.eq.10
      &   .or.iv.eq.12.or.iv.eq.15) isig=-1
-         if(iv.ge.20.and.iv.le.28) idel=9
-         if(iv.ge.29.and.iv.le.37) idel=-9
+         if(iv.ge.22.and.iv.le.30) idel=9
+         if(iv.ge.31.and.iv.le.39) idel=-9
          endif
       endif
       ivd=iv+idel
@@ -306,6 +337,11 @@ c------------------------------------------------start loop on variables
          else
          v=bptot
          endif
+      if((iv.eq.20.or.iv.eq.21).and.iwin.gt.1) 
+     &  call swind(v,iv,ivl,ksnap)
+          if(iv.eq.21) then
+          if(vstor(i-1).lt.clim) v=300.
+          endif
       if(abs(v).lt.250) then
       ks(i)=ks(i)+1
       sum(i)=sum(i)+v
@@ -319,16 +355,9 @@ c------------------------------------------------start loop on variables
          cssum(i,1)=cssum(i,1)+cos(vrad)
          cssum(i,2)=cssum(i,2)+sin(vrad)
          endif
-      if(ivd.lt.20.or.ivd.gt.37)then
+         if(ivd.lt.21.or.ivd.gt.39) then
          if(v.lt.vmin(i)) vmin(i)=v
          if(v.gt.vmax(i)) vmax(i)=v
-      endif
-c-------------------------------------------------------------sugar bins
-         if(ivd.eq.27.or.ivd.eq.36) then
-         vpos=v
-         if(v.lt.0.) vpos=360.+v
-         jb=1+int(vpos/36)
-         bin(i,jb)=bin(i,jb)+1
          endif
 c-----------------------------------------------------generate histogram
          if(kang(ivd).eq.0) then
@@ -337,8 +366,15 @@ c-----------------------------------------------------generate histogram
             ipos=nint(v*10)
             endif
          if(abs(ipos).le.n3) hist(i,ipos)=hist(i,ipos)+1
+c-------------------------------------------------------------sugar bins
+         if(ivd.eq.29.or.ivd.eq.38) then
+         vpos=v
+         if(v.lt.0.) vpos=360.+v
+         jb=1+int(vpos/36)
+         bin(i,jb)=bin(i,jb)+1
+         endif
 c------------------------------------------------------epsilon/zeta bins
-         if(ivd.eq.24.or.ivd.eq.33) then
+         if(ivd.eq.26.or.ivd.eq.35) then
          vdif=v-bpdat(il,ivd+1)
          if(abs(vdif).gt.180) vdif=vdif-sign(360.d0,vdif)
          if(vdif.lt.0) then
@@ -348,7 +384,7 @@ c------------------------------------------------------epsilon/zeta bins
             endif
          endif
 c-------------------------------------------------------alpha/gamma bins
-         if(ivd.eq.20.or.ivd.eq.29) then
+         if(ivd.eq.22.or.ivd.eq.31) then
          va=v
          vg=bpdat(il,ivd+2)
          iva=0
@@ -360,22 +396,19 @@ c-------------------------------------------------------alpha/gamma bins
          iag=(iva-1)*3+ivg
          bin(i,iag)=bin(i,iag)+1
          endif
-
-         if(series.or.corr) then
+c-----------------------------------------------------------store values
          vstor(i)=v
          kstor(i)=ks(i)
-         endif
 c-----------------------------------------end processing of level/record
-            else !....bpdat data doesn't exist
-            flag(i)=.true.
-            endif
+         else !.... test v>250, bpdat data doesn't exist
+         flag(i)=.true.
+         endif
          enddo !....nl
       enddo !....i
 c-------------------------------------------------------start series O/P
       if(series) then
       do i=0,n4
          if(.not.fop(i)) then
-         kfi=index(lis,' ')-1
          kfn=lenv(i)
          fop(i)=.true.
          open(unit=i+9,file=lis(:kfi)//'_'//namv(i)(:kfn)//'.ser',
@@ -390,8 +423,13 @@ c-------------------------------------------------------start series O/P
          write(cstor(j),'(a8)') nastr
          endif
       enddo
+      if((i.ne.20.and.i.ne.21).or.iwin.eq.1) then
       write(i+9,32) kseen,(cstor(j),j=0,jup)
 32    format(i12,450a8)
+         else if(ksnap.ge.iwin) then
+         ksoff=(ksnap-1-iwin/2)*itdel+itst
+         write(i+9,32) ksoff,(cstor(j),j=0,jup)
+         endif
       enddo
       endif
 c--------------------------------------------------data for correlations
@@ -449,9 +487,9 @@ c--------------------------------------------------data for correlations
       endif
 
       goto 20 ! loop to next snapshot
-c------------------------------------------------end of processing input
+c================================================end of processing input
 10       if(series) then
-         do i=1,n4
+         do i=0,n4
          close(unit=i+9)
          enddo
          endif
@@ -474,7 +512,7 @@ c-----------------------------------------------------------------------
       write(6,19)
 19    format(/5x,'No.',2x,'Lev',6x,'Var',4x,'Aver',4x,'Sdev',4x,
      & 'Range',4x,'Min',5x,'Max',4x,'Ndat')
-c------------------------------------------------------------output data
+c============================================================output data
       do i=0,kvar
       iv=kv(i)
       il=kl(i)
@@ -506,11 +544,6 @@ c------------------------------------------------------------output data
          r=sqrt(cssum(i,1)**2+cssum(i,2)**2)
          vave(i)=acos(cssum(i,1)/r)*crd
          if(cssum(i,2).lt.0.) vave(i)=-vave(i)
-
-c        r2=(vcos(i)/ks(i))**2+(vsin(i)/ks(i))**2
-c        eps=sqrt(1-r2)
-c        vdev2=crd*(1-0.1547*eps**3)*asin(eps)
-
          vdel=0
          do j=1,360
          if(range(i,j)) vdel=vdel+1
@@ -527,22 +560,16 @@ c        vdev2=crd*(1-0.1547*eps**3)*asin(eps)
             enddo
             vdev(i)=sqrt(suma/ks(i))
             if(iv.lt.20) then
-      if(klin.gt.1) then
-         write(6,26) i,slev,namv(i)(:kfn),vave(i),
-     & vdev(i),vdel,vmin(i),vmax(i),ks(i)
-      else
-         write(6,26) i,slev,namv(i)(:kfn),vave(i),
-     & vdev(i),vdel,vmin(i),vmax(i),ks(i)
-      endif
+            write(6,26) i,slev,namv(i)(:kfn),vave(i),
+     &      vdev(i),vdel,vmin(i),vmax(i),ks(i)
 26          format(2x,i5,') ',a3,1x,a9,2(f7.1,1x),3f8.1,3i12)
             else
-            write(6,27) i,slev,namv(i)(:kfn),vave(i),vdev(i),vdel,
-     &      ks(i)
+            write(6,27) i,slev,namv(i)(:kfn),vave(i),vdev(i),vdel,ks(i)
+27          format(2x,i5,') ',a3,1x,a9,2(f7.1,1x),f8.1,16x,i12)
             endif
-27       format(2x,i5,') ',a3,1x,a9,2(f7.1,1x),f8.1,16x,i12)
          endif
-      if(iv.eq.6.or.iv.eq.11.or.iv.eq.19.or.iv.eq.28.or.iv.eq.37)
-     & write(6,23)
+      if(iv.eq.6.or.iv.eq.11.or.iv.eq.19.or.iv.eq.21
+     & .or.iv.eq.30.or.iv.eq.39) write(6,23)
 23    format(4x,75('-'))
       endif
       enddo
@@ -555,7 +582,7 @@ c---------------------------------------------------------O/P sugar bins
       ic=0
       do i=1,kvar
       iv=kv(i)
-      if(iv.eq.27.or.iv.eq.36) then
+      if(iv.eq.29.or.iv.eq.38) then
       ic=ic+1
       il=kl(i)
       kfn=lenv(i)
@@ -589,7 +616,7 @@ c--------------------------------------------------O/P epsilon/zeta bins
       ic=0
       do i=1,kvar
       iv=kv(i)
-      if(iv.eq.24.or.iv.eq.33) then
+      if(iv.eq.26.or.iv.eq.35) then
       if(ks(i).gt.0.and.ks(i+1).gt.0) then
       ic=ic+1
       il=kl(i)
@@ -624,7 +651,7 @@ c---------------------------------------------------O/P alpha/gamma bins
       ic=0
       do i=1,kvar
       iv=kv(i)
-      if(iv.eq.20.or.iv.eq.29) then
+      if(iv.eq.22.or.iv.eq.31) then
       if(ks(i).gt.0.and.ks(i+2).gt.0) then
       ic=ic+1
       il=kl(i)
@@ -705,7 +732,6 @@ c----------------------------------------------------------O/P histogram
       if(hsum(i).eq.0) hsum(i)=1
       enddo !... i variables
 
-         kfi=index(lis,' ')-1
          do i=0,n4
          kfn=lenv(i)
          open(unit=9,file=lis(:kfi)//'_'//namv(i)(:kfn)//'.his',
@@ -724,8 +750,7 @@ c----------------------------------------------------------O/P histogram
          enddo
       endif
 c--------------------------------------------O/P single structure series
-      kfi=index(lis,' ')-1
-      if(ksnap.eq.1) then
+      if(series.and.ksnap.eq.1) then
       nout=ncol
       if(lseq.gt.0) nout=nlev
       do i=1,n4
@@ -848,21 +873,24 @@ c=======================================================================
       subroutine nml
       implicit integer*4 (i-n)
       implicit real*8 (a-h,o-z)
-      parameter (n_real=1,n_int=5,n_log=3,n_cha=3,n_tot=12)
-      character*48 lis,seq,vc(n_cha),nastr*48
-      character lini*100,input(n_tot)*10,lj*1
+      parameter (n_real=4,n_int=6,n_log=3,n_cha=4,n_tot=17)
+      character*128 lis,seq,prop,vc(n_cha),nastr
+      character*200 lini
+      character input(n_tot)*10,lj*1
       logical*2 corr,series,histo,vo(n_log),iflag(n_tot),
      & finml,lanml,start
       integer*4 first,last,skip,vi(n_int),nmls(n_tot)
       dimension vr(n_real)
-      common/cha/lis,seq,nastr
-      common/dat/cormin,lev1,lev2,itst,itnd,itdel,corr,series,
-     & histo
-      equivalence (vc(1),lis),(vr(1),cormin),(vi(1),lev1),
+      common/cha/lis,seq,prop,nastr
+      common/dat/pmin,pmax,cormin,clim,lev1,lev2,itst,itnd,itdel,
+     & iwin,corr,series,histo
+      equivalence (vc(1),lis),(vr(1),pmin),(vi(1),lev1),
      & (vo(1),corr)
 c-----------------------------------------------------------------------
-      data input /'cormin','lev1','lev2','itst','itnd',
-     & 'itdel','corr','series','histo','lis','seq','nastr'/
+      data input /'pmin','pmax','cormin','clim',
+     & 'lev1','lev2','itst','itnd','itdel','iwin',
+     & 'corr','series','histo',
+     & 'lis','seq','prop','nastr'/
       ninr=n_int+n_real
       nlog=n_log+ninr
          do i=1,n_tot
@@ -878,7 +906,7 @@ c-----------------------------------------------------------------------
       if(.not.finml) lanml=.true.
       if(finml.and.index(lini(im+1:),'&').ne.0) lanml=.true.
       endif
-      do k=1,100
+      do k=1,200
       if(lini(k:k).eq.'=') then
       kl=k
       start=.true.
@@ -890,6 +918,9 @@ c-----------------------------------------------------------------------
       else if(.not.start.and.(lj.eq.' '.or.lj.eq.',')) then
       jl=j+1
       goto 15
+      else if(j.eq.1) then
+      jl=j
+      goto 15
       endif
       enddo
       goto 50
@@ -898,7 +929,7 @@ c-----------------------------------------------------------------------
          iflag(i)=.true.
 17          kl=kl+1
             if(lini(kl:kl).eq.' ') goto 17
-            do j=kl,100
+            do j=kl,200
             lj=lini(j:j)
             if(lj.eq.' '.or.lj.eq.','.or.lj.eq.'&') then
             kh=j-1
@@ -933,7 +964,7 @@ c-----------------------------------------------------------------output
       write(6,200) 
 200   format(
      1/5x,'***************************************',
-     1/5x,'****  CANAL   Version 1.3 9/2014  ****',
+     1/5x,'****  CANAL   Version 1.5 10/2016  ****',
      1/5x,'***************************************'//)
       do i=1,n_tot
       nm=nmls(i)
@@ -961,4 +992,77 @@ c-----------------------------------------------------------------------
 50    write(6,55) lini(jl:jh)
 55    format(/2x,'---- Error in namelist input for ',a,' ----'/)
       stop
+      end
+c=======================================================================
+      subroutine swind(v,iv,j,ksnap)
+      implicit integer*4 (i-n)
+      implicit real*8 (a-h,o-z)
+      parameter(
+     & n1=10750, !...maximum number of variables to print (kvar)
+     & n2=250,   !...maximum number of base pair levels
+     & n3=1800,  !...bins for stocking fine histogram (0.1° / 0.01 ang)
+     & n4=43,    !...number of variables per level in Cur+ record
+     & n5=100,   !...maximum number of bins in O/P histogram
+     & n6=1000)  !...maximum sliding window width in snapshots
+      parameter (cdr=0.017453293d0,crd=57.29577951d0)
+      logical*2 corr,series,histo
+      common/dat/pmin,pmax,cormin,clim,lev1,lev2,itst,itnd,itdel,
+     & iwin,corr,series,histo
+      common/sld/vsum(n2),vold(n2),vcur(n6,n2),vreg(n2),volc(n2),
+     & vols(n2),vsuc(n2),vsus(n2),vrec(n6,n2),vres(n6,n2)
+      ipos=mod(ksnap,iwin)
+      if(ipos.eq.0) ipos=iwin
+      if(iv.eq.20) then
+      vold(j)=vcur(ipos,j)
+      vcur(ipos,j)=v
+         else
+         vrad=v*cdr
+         volc(j)=vrec(ipos,j)
+         vols(j)=vres(ipos,j)
+         vrec(ipos,j)=cos(vrad)
+         vres(ipos,j)=sin(vrad)
+         endif
+c-------------------------------------------------------------first fill
+      if(ksnap.eq.iwin) then
+      if(iv.eq.20) then
+      vsum(j)=0.d0
+      do m=1,iwin
+      vsum(j)=vsum(j)+vcur(m,j)
+      enddo
+      vsum(j)=vsum(j)/iwin
+         else
+         vsuc(j)=0.d0
+         vsus(j)=0.d0
+         do m=1,iwin
+         vsuc(j)=vsuc(j)+vrec(m,j)
+         vsus(j)=vsus(j)+vres(m,j)
+         enddo
+         r=sqrt(vsuc(j)**2+vsus(j)**2)
+         vreg(j)=acos(vsuc(j)/r)*crd
+         if(vsus(j).lt.0) vreg(j)=-vreg(j)
+         endif
+c-------------------------------------------------------after first fill
+            else if(ksnap.gt.iwin) then
+            if(iv.eq.20) then
+            vsum(j)=vsum(j)+(vcur(ipos,j)-vold(j))/iwin
+               else
+               vsuc(j)=vsuc(j)-volc(j)+vrec(ipos,j)
+               vsus(j)=vsus(j)-vols(j)+vres(ipos,j)
+               r=sqrt(vsuc(j)**2+vsus(j)**2)
+               vreg(j)=acos(vsuc(j)/r)*crd
+               if(vsus(j).lt.0) vreg(j)=-vreg(j)
+               endif
+      endif
+c-----------------------------------------------------------------assign
+      if(ksnap.ge.iwin) then
+      if(iv.eq.20) then
+      v=vsum(j)
+         else
+         v=vreg(j)
+         endif
+      else
+      v=250.
+      endif
+c-----------------------------------------------------------------------
+      return
       end
