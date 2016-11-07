@@ -2,7 +2,7 @@
 
 {% block scripts %}
 {{super()}}
-<script>
+<script type="text/javascript">
   $("#plots_selector").change(function(){
     /* Activate carousel on change */
     var selected = $(this).children(":selected" )[0]; 
@@ -19,7 +19,8 @@
   });
   $(document).ready(function() {
     $("img[data-src]").each(function() {
-      $(this).attr("src", $(this).attr("data-src"));});
+      $(this).attr("src", $(this).attr("data-src"));
+      $(this).css("display", "block");});
   });
 </script>
 {% endblock %}
@@ -35,6 +36,11 @@
 	{% for filename in "_B.pdb _X.pdb _R.pdb .lis in".split() %}
 	<dd><a href="{{ files[filename]['url'] }}">{{ files[filename]['name'] }}</a></dd>
 	{% endfor %}
+	<noscript>
+	  {% for variable in variables %}
+	  <dd><a href="/plot/{{ variable }}">{{ variable }}.png</a></dd>
+	  {% endfor %}
+	</noscript>
 	<br/>
       <dt>Download all files:</dt>
       <dd>
