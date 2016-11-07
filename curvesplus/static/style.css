@@ -39,6 +39,7 @@ select.ccontrol, select.ccontrol:hover, select.ccontrol:focus {
     width: auto;
     transform: translate(-50%, 0);
 }
+#plots img {display: none;}
 
 
 /* navbar */
