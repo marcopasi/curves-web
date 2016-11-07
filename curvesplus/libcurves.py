@@ -115,7 +115,7 @@ class LisFile(FileIntervals):
             line, value= _consume(line, 0, valuelen)
             key = key.strip()
             if ret.has_key(key):
-                raise ValueError("NML Error: Duplicate configuration entry %s."%key)
+                raise ValueError("NML Error: Duplicate configuration entry {}.".format(key))
             ret[key] = value.strip()
         return ret
 
@@ -137,17 +137,18 @@ class Curves(object):
     inter_bp_variables= "shift slide rise tilt roll twist h-rise h-twist".split()
     backbone_variables= "alpha beta gamma delta epsilon zeta chi phase amplitude pucker".split()
     maxgrooves = 4
-    groove_variables = ["%s%d"%(var,num) for num in range(maxgrooves) for var in "width depth".split()]
+    groove_variables = ["{}{:d}".format(var,num) for num in range(maxgrooves) for var in "width depth".split()]
     curvature_variables = "curvature radius register".split()
     curves_variables  = bp_axis_variables + intra_bp_variables + \
                           inter_bp_variables + backbone_variables + groove_variables + \
                           curvature_variables
+    ## note that "none" means no unit name will be displayed.
     units = ("angstrom angstrom degree degree degree " +
              "angstrom angstrom angstrom degree degree degree " +
              "angstrom angstrom angstrom degree degree degree angstrom degree " +
              "degree degree degree degree degree degree degree degree degree degree").split() + \
             "angstrom angstrom".split()*maxgrooves + \
-            "a.u. angstrom degree".split()
+            "none angstrom degree".split()
     assert len(units) == len(curves_variables)
 
     ## plot configuration
@@ -161,7 +162,10 @@ class Curves(object):
     def get_unit(cls, var):
         if not cls.is_variable(var):
             return None
-        return cls.units[cls.curves_variables.index(var)]
+        unit = cls.units[cls.curves_variables.index(var)]
+        if unit == "none":
+            unit = ""
+        return unit
     
     def __init__(self, filename):
         self.lisfile = LisFile(name = filename, conditions = self.section_headers)
@@ -284,7 +288,7 @@ class Curves(object):
     def get_variable(self, varname, interval=None, step=1):
         """Return the Series corresponding to an interval of the specified variable"""
         if not self.is_variable(varname):
-            raise ValueError("Variable '%s' not recognised."%varname)
+            raise ValueError("Variable '{}' not recognised.".format(varname))
 
         start, end = self.normalize_interval(interval)
         
@@ -364,7 +368,11 @@ class Curves(object):
                 plt.xticks(x, seq)
         plt.xlim([min(x), max(x)])
         plt.xlabel("Basepair")
-        plt.ylabel("%s (%ss)"%(varname.capitalize(), self.get_unit(varname)))
+        ylabel = "{}".format(varname.capitalize())
+        unit = self.get_unit(varname)
+        if len(unit):
+            ylabel += " ({})".format(unit)
+        plt.ylabel(ylabel)
         return plot
                     
 def main():
