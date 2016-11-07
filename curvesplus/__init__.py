@@ -6,15 +6,19 @@
 # (at your option) any later version.
 #
 from flask import Flask, request, session, g, redirect, url_for, \
-     abort, render_template, flash
+     abort, render_template, flash, make_response
 from flask.ext.uploads import UploadSet, configure_uploads
 from flask_bootstrap import Bootstrap, StaticCDN
 from flask_nav import Nav
 from flask_nav.elements import Navbar, View, Subgroup
 
 import os
+from functools import wraps, update_wrapper
+from datetime import datetime
 from zipfile import ZipFile
 import libcurves
+
+## Uncomment the following lines to have lis and pdb files downloaded
 # import mimetypes
 # mimetypes.add_type('text/plain', '.lis')
 # mimetypes.add_type('text/plain', '.pdb')
@@ -49,6 +53,17 @@ from .curvesrun import WebCurvesConfiguration, DummyCurvesRun, SubprocessCurvesR
 #     """ Executed after request, even in case of exception. """
 #     pass
 
+#----- "nocache" wrapper
+def nocache(view):
+    @wraps(view)
+    def no_cache(*args, **kwargs):
+        response = make_response(view(*args, **kwargs))
+        response.headers['Last-Modified'] = datetime.now()
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        return response
+    return update_wrapper(no_cache, view)
 
 #----- "static" routes
 @app.route('/instructions', methods=['GET'])
@@ -122,8 +137,8 @@ def analyse():
     # else:
     #     form = CurvesForm(request.form)
 
-    class DummyException(Exception):
-        """Dummy exception to exit the next try."""
+    class NoException(Exception):
+        """Dummy exception to exit a try clause."""
         pass
 
     try:
@@ -131,14 +146,14 @@ def analyse():
             runid = request.args.get("runID")
             outdir = os.path.join(app.static_folder, runid)
             urlbase = outdir[outdir.find('static'):]
-            curvesrun = DummyCurvesRun(outdir=outdir, urlbase=urlbase)
+            curvesrun = DummyCurvesRun(outdir=outdir, urlbase=urlbase, jobname=runid)
             app.logger.info(curvesrun)
             if curvesrun.any_output():
                 app.logger.info("Displaying run %s"%runid)
                 return success_response(curvesrun, configuration)                
             else:
                 flash("No previously executed run with ID %s found."%runid, 'danger')
-                raise DummyException()
+                raise NoException()
             
         elif request.method == 'POST' and form.validate():
             "Populate configuration with form entries."
@@ -146,7 +161,6 @@ def analyse():
             # "Take some form entries as options."
             # options.update_from(form.data)
             app.logger.info("Configuration: <%s>"%configuration)
-            #assert 1==0
             "Treat special case of input file"
             jobname = None
             #XXX Taken from flask-wtf.file.FileField.has_file():
@@ -162,7 +176,7 @@ def analyse():
                 jobname = configuration.pdbid
             else:
                 flash('ERROR: Must specify either a PDB File or a valid PDBid.', 'danger')
-                raise DummyException()
+                raise NoException()
 
             app.logger.info("JOB name: <%s>"%jobname)
             app.logger.info("PDB file: <%s>"%pdbfilename)
@@ -177,7 +191,7 @@ def analyse():
             if not curvesrun.any_output():
                 """ if all output files aren't present, flash stderr and stop """
                 flash("ERROR: No output files produced. "+message, 'danger')
-                raise DummyException()
+                raise NoException()
             elif not curvesrun.all_outputs():
                 """ if any output file isn't present, flash stderr """
                 message = "WARNING: Some output files missing. "+message
@@ -189,7 +203,7 @@ def analyse():
             app.logger.info("Temp dir <%s>"%curvesrun.urlbase)
             if retrun:
                 return success_response(curvesrun, configuration)
-    except DummyException:
+    except NoException:
         pass
     except AssertionError as e:
         raise e
@@ -200,6 +214,7 @@ def analyse():
 
 #-----
 @app.route('/zip', methods=['GET'])
+@nocache
 def makezip(filename="output"):
     filename = request.args.get("prefix", filename)
     zipname = os.path.join(session['outdir'],filename+".zip")
@@ -211,6 +226,7 @@ def makezip(filename="output"):
 
 #-----
 @app.route('/plot/<string:variable>', methods=['GET'])
+@nocache
 def plot(variable):
     if variable is not None and not libcurves.Curves.is_variable(variable):
         #flash("Variable <%s> not recognised"%variable, 'danger')
