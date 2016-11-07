@@ -61,7 +61,7 @@ if(niso){isosurface niso on;} else {\
 print 'isocreate';niso=on;\
 frame last;isosurface niso resolution 1 solvent 1.4;color isosurface "+nisoc+";\
 frame all;print 'isodone';};"];
-var NDISPNAMES = ["Lines", "CPK", "Surface"];
+var NDISPNAMES = ["Lines", "Ball & Stick", "Surface"];
 // colors
 var GRVCOLORS=["lawngreen", "orange", "pink", "silver"];
 var BACCOLOR = "red";
@@ -201,12 +201,12 @@ print \"loaddone\";";
     }
     // placeholder for dynamically derived backbone and grooves
     jmolHtml("<div id=\"bbdisplay\" >&nbsp;</div>");
-    jmolHtml("</div>");
     if(hasCR) {
         jmolHtml("<div id=\"crdisplay\">");
         jmolCheckbox(_sh(crf,1),_sh(crf,0), "Curvature", "checked");
         jmolHtml("</div>");
     }
+    jmolHtml("</div>");
     
     // color choice and rotation buttons
     jmolHtml("<div class=\"rcontrols col-md-6\">");
