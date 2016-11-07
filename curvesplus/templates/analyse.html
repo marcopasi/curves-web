@@ -18,9 +18,13 @@
     select.val(option.value);
   });
   $(document).ready(function() {
-    $("img[data-src]").each(function() {
-      $(this).attr("src", $(this).attr("data-src"));
-      $(this).css("display", "block");});
+      $("img[data-src]").each(function() {
+          $(this).attr("src", $(this).attr("data-src"));
+      });
+      $("img[data-src]").load(function() {
+          $(this).css("display", "block");
+          console.log(this);
+      });
   });
 </script>
 {% endblock %}
