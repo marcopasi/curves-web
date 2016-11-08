@@ -34,7 +34,7 @@
 	{% for strand in form.strands %}
 	<tr>
 	  <td>#{{ loop.index }}</td>
-	  <td>{{ strand.nucleotides(size=30, class='form-control') }}</td>
+	  <td>{{ strand.nucleotides(size=30, class='form-control', value='') }}</td>
 	    {% for choice in strand.direction %}
 	    <td>{{ choice(class='form-control') }}</td>
 	    {% endfor %}
