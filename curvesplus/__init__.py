@@ -115,11 +115,13 @@ def success_response(run, conf=None):
         os.path.join(run.outdir, run.infile),
         run.urlbase+"/"+run.infile,
         run.infile, ".pdb")
+
     """ Fill session with necessary information from run """
     session['lisfile'] = run.output_file(".lis")
     session['outdir']  = run.outdir
     session['outurl']  = run.urlbase
     session['files'] = files
+
     return render_template('analyse.html',
                            files = files,
                            job = run.jobname,
@@ -232,25 +234,27 @@ def plot(variable):
         #flash("Variable <%s> not recognised"%variable, 'danger')
         return "Variable <%s> not recognised"%variable
 
-    try:
-        curves = libcurves.Curves(session['lisfile'])
-        plot = curves.plot(variable)
-        fig = plot[0].figure
-        fig.gca().grid()
-        filename = variable+".png"
-        filepath = os.path.join(session['outdir'], filename)
-        fileurl  = "/"+session['outurl']+"/"+filename
-        #app.logger.info(filepath+":"+fileurl)
-        fig.savefig(filepath)
-        return redirect(fileurl)
-    except:
-        #flash("ERROR: Couldn't produce plot.", 'danger')
-        #return analyse()
-        if app.config["DEBUG"]:
-            import traceback
-            traceback.print_exc()
-        return "ERROR: Couldn't produce plot."
-
+    filename = variable+".png"
+    filepath = os.path.join(session['outdir'], filename)
+    fileurl  = "/"+session['outurl']+"/"+filename
+    if not os.path.isfile(filepath):
+        app.logger.info("Making plot <%s> <%s>"%(variable, datetime.now()))
+        try:
+            curves = libcurves.Curves(session['lisfile'])
+            plot = curves.plot(variable)
+            fig = plot[0].figure
+            fig.gca().grid()
+            #app.logger.info(filepath+":"+fileurl)
+            fig.savefig(filepath)
+        except:
+            #flash("ERROR: Couldn't produce plot.", 'danger')
+            #return analyse()
+            if app.config["DEBUG"]:
+                import traceback
+                traceback.print_exc()
+                return "ERROR: Couldn't produce plot."
+    app.logger.info("Done plot <%s> <%s>"%(variable, datetime.now()))
+    return redirect(fileurl)
 
 #-----
 nav = Nav()
