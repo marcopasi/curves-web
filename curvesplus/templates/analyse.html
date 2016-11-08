@@ -18,12 +18,8 @@
     select.val(option.value);
   });
   $(document).ready(function() {
-      $("img[data-src]").each(function() {
-          $(this).attr("src", $(this).attr("data-src"));
-      });
-      $("img[data-src]").load(function() {
+      $("#plots img").load(function() {
           $(this).css("display", "block");
-          console.log(this);
       });
   });
 </script>
@@ -59,7 +55,7 @@
   <div class="carousel-inner" role="listbox">
     {% for variable in variables %}
     <div class="item {% if variable == 'twist' %} active {% endif %}">
-      <img data-src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
+      <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
       <!-- <div class="carousel-caption">{{ variable|capitalize }}</div> -->
     </div>
     {% endfor %}
@@ -88,11 +84,11 @@
     <!-- version 1.3 -->
     <div class="jmol">
       <form id="jmol">
-	<script type=text/javascript src="{{
+	<script type="text/javascript" src="{{
 					  url_for('.static', filename='vendor/JSmol.min.js') }}"></script>
-	<script type=text/javascript src="{{
+	<script type="text/javascript" src="{{
 					  url_for('.static', filename='vendor/Jmol2.js') }}"></script>
-	<script type=text/javascript src="{{
+	<script type="text/javascript" src="{{
 					  url_for('.static', filename='jmol_viewer.js') }}"></script>
 	<script type="text/javascript">
           jmol_viewer("{{ files['_X.pdb'].url }}",
