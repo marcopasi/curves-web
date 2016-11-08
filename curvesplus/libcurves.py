@@ -11,6 +11,7 @@ LibCurves: Parse Curves+ lis outputs and plot results using matplotlib.
 
 import pandas as pd
 from numpy import inf, pad
+import matplotlib.pyplot as plt
 
 # TODO:
 # 1) FileIntervals: rename and comment
@@ -326,7 +327,6 @@ class Curves(object):
              xtransform=None, ytransform=None,
              **kwargs):
         """Plot a variable on an interval using pyplot."""
-        import matplotlib.pyplot as plt
 
         # if start is not None and start < 1:
         #     raise ValueError("Interval start <%d> not valid."%start)
