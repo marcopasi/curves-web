@@ -25,7 +25,12 @@
 </script>
 {% endblock %}
 
+{# Hack to get the selected variable to load faster #}
 {% set variables = "ax-bend shear stretch stagger buckle propeller opening shift slide rise tilt roll twist width0 width1 curvature radius register".split() %}
+{% set selected_variable = "twist" %}
+{% set selected_index = variables.index(selected_variable) %}
+{% set num_variables = variables|length %}
+{% set delta_index = num_variables - selected_index %}
 
 {% block curves %}
 <div class="row">
@@ -53,8 +58,8 @@
 <div id="plots" class="carousel" data-ride="carousel" data-interval="">
   <!-- Wrapper for slides -->
   <div class="carousel-inner" role="listbox">
-    {% for variable in variables %}
-    <div class="item {% if variable == 'twist' %} active {% endif %}">
+    {% for variable in variables[selected_index:]+variables[:selected_index] %}
+    <div class="item {% if variable == selected_variable %} active {% endif %}">
       <img src="/plot/{{ variable }}" alt="{{ variable|capitalize }}">
       <!-- <div class="carousel-caption">{{ variable|capitalize }}</div> -->
     </div>
@@ -64,7 +69,7 @@
   <!-- Controls -->
   <select id="plots_selector" class="ccontrol" data-target="#plots">
     {% for variable in variables %}
-    <option value="{{ variable }}" data-slide-to="{{ loop.index0 }}" {% if variable == 'twist' %} selected {% endif %}>{{ variable|capitalize }}</option>
+    <option value="{{ variable }}" data-slide-to="{{ (loop.index0+delta_index)%num_variables }}" {% if variable == selected_variable %} selected {% endif %}>{{ variable|capitalize }}</option>
     {% endfor %}
   </select>
   <a class="l ccontrol" href="#plots" role="button" data-slide="prev">
@@ -76,6 +81,7 @@
     <span class="sr-only">Next</span>
   </a>
 </div>
+&nbsp;
   </div>
   
   <div class="col-md-7">
