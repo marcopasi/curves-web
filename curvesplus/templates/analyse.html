@@ -93,12 +93,12 @@
     <script type="text/javascript" src="{{
 					url_for('.static', filename='ngl_viewer.js') }}"></script>
     <script type="text/javascript">
-      document.addEventListener( "DOMContentLoaded", function() {
-          ngl_viewer("{{ files['_X.pdb'].url }}",
-                     "{{ files['_B.pdb'].url }}",
-                     "{{ files['_R.pdb'].url }}",
-                     "{{ files['in'].url }}");
-      });
+        $(document).ready(function() {
+            ngl_viewer("{{ files['_X.pdb'].url }}",
+                       "{{ files['_B.pdb'].url }}",
+                       "{{ files['_R.pdb'].url }}",
+                       "{{ files['in'].url }}");
+        });
     </script>
     <div id="viewport" style="width:95%; height:400px;"></div>
     <div class="controls row">
