@@ -8,15 +8,21 @@
  */
 
 /**** NGL for Curves+
-  * version 0.2
+  * version 0.3
   ****/
+
+/**** Changelog
+ * v0.1		First draft
+ * v0.2		Reproduce 90% capabilities of the Jmol viewer
+ * v0.3		RepresentationGroups API simplify GUI creation
+ ****/
 
 /**** TODO
  * - variable groove number
- * - 
- * - 
- * - 
+ * - align and spin wrt Axis
+ * - reset orientation to initial
  */
+
 
 /* GLOBAL SETTINGS */
 var AWF = 0.3,                  // radius for Axis
@@ -28,50 +34,61 @@ var BGCOLORS =["lightgray","white","black","powderblue"];
 var DEBUG = false;
 
 /* GLOBALS */
-var stage, compdata;
+var stage, repdata;
 
 /* Create the viewer */
 function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
-    compdata = {};
+    repdata = {};
     stage = new NGL.Stage("viewport",
                           {"cameraType": "orthographic"});
-    
-    var pdbcomp = stage.loadFile(PDBPATH)
+
+    // Create RepresentationGroups for the input PDB
+    var pdbRG = stage.loadFile(PDBPATH)
         .then(function(c) {return c.centerView();})
         .then(do_input, error);
 
-    var axcomp, bbcomp, crcomp;
+    var axRG, bbRG, crRG;
     if(typeof(AXPATH) != "undefined") {
-        axcomp = stage.loadFile(AXPATH)
+        // Create RepresentationGroups for the axis PDB
+        axRG = stage.loadFile(AXPATH)
             .then(function(c) {return c.centerView();})
             .then(do_ax, error);
     }
     if(typeof(BBPATH) != "undefined") {
-        bbcomp = stage.loadFile(BBPATH).then(do_bb, error);
+        // Create RepresentationGroups for the backbone PDB
+        bbRG = stage.loadFile(BBPATH).then(do_bb, error);
     }
     if(typeof(CRPATH) != "undefined") {
-        crcomp = stage.loadFile(CRPATH).then(do_cr, error);
+        // Create RepresentationGroups for the curvature PDB
+        crRG = stage.loadFile(CRPATH).then(do_cr, error);
     }
-    
-    Promise.all([pdbcomp, axcomp, bbcomp, crcomp]).then(function(cdata) {
-        cdata.forEach(function(cd) {$.extend(compdata, cd);});
-        return compdata
+
+    // Wall: resolve all RepresentationGroups
+    Promise.all([pdbRG, axRG, bbRG, crRG]).then(function(RG) {
+        // Aggregate RepresentationGroups in repdata
+        RG.forEach(function(rep) {$.extend(repdata, rep);});
+        return repdata;
     }).then(
-        function(cdata) {
+        // Write GUI for RepresentationGroups
+        // in specific containers, in a specific order.
+        function(RGdata) {
+            console.log(RGdata);
             var lc = $("#"+"lcontrols");
-            lc.append(r_GUI(cdata["Nucleic Acid"], "Nucleic Acid", "nadisplay"),
-                      r_GUI(cdata["Axis"], "Axis", "axdisplay"),
-                      r_GUI(cdata["Backbone"], "Backbone", "bbdisplay"),
-                      r_GUI(cdata["Groove12"], "Groove12", "gr1display"),
-                      r_GUI(cdata["Groove21"], "Groove21", "gr2display"),
-                      r_GUI(cdata["Curvature"], "Curvature", "crdisplay"));
+            lc.append(RGdata["Nucleic Acid"].GUI("nadisplay"),
+                      RGdata["Axis"].GUI("axdisplay"),
+                      RGdata["Backbone"].GUI("bbdisplay"),
+                      RGdata["Groove12"].GUI("gr1display"),
+                      RGdata["Groove21"].GUI("gr2display"),
+                      RGdata["Curvature"].GUI("crdisplay"));
             var rc = $("#"+"rcontrols");
-            rc.append(r_GUI(cdata["Protein"], "Protein", "prodisplay"));
+            rc.append(RGdata["Protein"].GUI("prodisplay"));
             rc.append(GUI_extras());
         });
 }
 
 function GUI_extras() {
+    /* Define extra GUI elements.
+     */
     // Background
     var cdiv = $("<div/>", {"class": "colors"});
     cdiv.append("Background: ");
@@ -83,7 +100,8 @@ function GUI_extras() {
                     .css("background-color", c)
                     .click(function(e) {stage.viewer.setBackground(c);})));
     });
-
+    
+    // Buttons
     var ddiv = $("<div/>", {"class": "buttons"});
     ddiv.append($("<input/>", {"type": "button",
                                "value": "Center"})
@@ -106,54 +124,59 @@ function GUI_extras() {
 /* Representation callbacks
  *
  * Configure representations here.
- */
+ * Each method creates a dictionary of RepresentationGroups, one
+ * for each selection relevant for the specified component.
+ * These are subsequently aggregated and used to design GUI.
+ *
+ */   
 function do_input(comp) {
     return {
         // Nucleic
         "Nucleic Acid":
-        r_set_selection("nucleic",
-                      [comp.addRepresentation( "licorice",   {"colorScheme":"uniform",
-                                                              "colorValue":"gray"}),
-                       comp.addRepresentation( "ball+stick", {"colorScheme":"element"}),
-                       comp.addRepresentation( "spacefill",  {"colorScheme":"uniform",
-                                                              "colorValue":"yellow"})]),
+        new RepresentationGroup(comp, "Nucleic Acid", "nucleic",
+                      [comp.addRepresentation( "licorice",   {"colorScheme": "uniform",
+                                                              "colorValue":  "gray"}),
+                       comp.addRepresentation( "ball+stick", {"colorScheme": "element"}),
+                       comp.addRepresentation( "spacefill",  {"colorScheme": "uniform",
+                                                              "colorValue":  "yellow"})]),
         // Protein
         "Protein":
-        r_set_selection("protein",
-                      [comp.addRepresentation( "cartoon", {"colorScheme":"uniform",
-                                                           "colorValue":"steelblue"}),
-                       comp.addRepresentation( "licorice", {"colorScheme":"element"}),
-                       comp.addRepresentation( "spacefill", {"colorScheme":"uniform",
-                                                             "colorValue":"deepskyblue"})])
+        new RepresentationGroup(comp, "Protein", "protein",
+                      [comp.addRepresentation( "cartoon", {"colorScheme":   "uniform",
+                                                           "colorValue":    "steelblue"}),
+                       comp.addRepresentation( "licorice", {"colorScheme":  "element"}),
+                       comp.addRepresentation( "spacefill", {"colorScheme": "uniform",
+                                                             "colorValue":  "deepskyblue"})])
     };
 }
 
 function do_ax(comp) {
     return {
         "Axis":
-        [comp.addRepresentation( "licorice", {"colorScheme":"uniform",
-                                              "colorValue":"blue",
-                                              "radius": AWF})]
+        new RepresentationGroup(comp, "Axis", null,
+                                [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                      "colorValue":  "blue",
+                                                                      "radius":      AWF})])
     };
 }
 
 function do_bb(comp) {
     return {
         "Backbone": 
-        r_set_selection("(:A or :B)",
-                      [comp.addRepresentation( "licorice", {"colorScheme":"uniform",
-                                                            "colorValue":"red",
-                                                            "radius": BWF})]),
+        new RepresentationGroup(comp, "Backbone", "(:A or :B)",
+                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                            "colorValue":  "red",
+                                                            "radius":      BWF})]),
         "Groove12": 
-        r_set_selection(":C",
-                      [comp.addRepresentation( "licorice", {"colorScheme":"uniform",
-                                                            "colorValue":"lawngreen",
-                                                            "radius": GWF})]),
+        new RepresentationGroup(comp, "Groove12", ":C",
+                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                            "colorValue":  "lawngreen",
+                                                            "radius":      GWF})]),
         "Groove21": 
-        r_set_selection(":D",
-                      [comp.addRepresentation( "licorice", {"colorScheme":"uniform",
-                                                            "colorValue":"orange",
-                                                            "radius": GWF})]),
+        new RepresentationGroup(comp, "Groove21", ":D",
+                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                            "colorValue":  "orange",
+                                                            "radius":      GWF})]),
         
     };
 }
@@ -161,85 +184,131 @@ function do_bb(comp) {
 function do_cr(comp) {
     return {
         "Curvature":
-        [comp.addRepresentation( "licorice", {"colorScheme":"uniform",
-                                              "colorValue":"blue",
-                                              "radius": CWF})]
+        new RepresentationGroup(comp, "Curvature", null,
+                                [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                      "colorValue":  "blue",
+                                                                      "radius":      CWF})])
     };
 }
 
 /* Representation groups API
- *
- * TODO refactor in a class
- *  - the constructor could receive the component and optional selection
- *  - adding Representations should trigger:
- *    - apply default parameters
- *    - set_selection
- *    - making invisible
  */
-function r_toggle(cdata, checked) {
-    if(checked) r_update(cdata);
-    else r_hideall(cdata);
+RepresentationGroup = function(component, name, selection = null, representations = null, 
+                               defaultParameters = {}) {
+    
+    /* Representation Group
+     * 
+     * Helps define groups of mutually-exclusive representations, and
+     * enables writing simple HTML GUI to control visibility.
+     * Uses the "enabled" property of NGL.Representation to keep track
+     * of user-specified visibility.
+     *
+     * Arguments
+     * ---------
+     *
+     * component	 The NGL.Component of the representations
+     * name		 A string describing the group (used in GUI)
+     * representations	 Optional list of representations to add
+     * selection	 A selection of the subset of component atoms
+     * 			 to which the representation is applied.
+     * defaultParameters A dictionary of NGL.Representation parameters
+     *			 to be applied to all representations.
+     */
+    this.component = component;
+    this.name = name;
+    this.selection = selection;
+    this.defaultParameters = defaultParameters;
+    this.enabled = true;
+    
+    this.reprList = [];
+
+    var self = this;
+    if(representations) 
+        representations.forEach(function(repr) {
+            self.addRepresentation(repr);
+        });
+};
+
+RepresentationGroup.prototype.addRepresentation = function(repr) {
+    // Apply default parameters
+    repr.setParameters(this.defaultParameters);
+    // Set selection if defined
+    if(this.selection)
+        repr.setSelection(this.selection);
+    // Hide initially
+    repr.setVisibility(false);
+    this.reprList.push(repr);
+}
+    
+RepresentationGroup.prototype.toggle = function(checked) {
+    // Toggle the enabled state of this group
+    this.enabled = checked;
+    this.update();
 }
 
-function r_hideall(cdata) {
-    cdata.forEach(function(cd) {
+RepresentationGroup.prototype.hideall = function() {
+    // Hide all representations in group
+    this.reprList.forEach(function(cd) {
         cd.setVisibility(false);
     });    
 }
 
-function r_enable(cdata, ci=-1) {
-    cdata.forEach(function(cd, i) {
+RepresentationGroup.prototype.enable = function(ci=-1) {
+    // Enable one representation of the group, by index
+    this.reprList.forEach(function(cd, i) {
         cd.enabled = i == ci;
     });
-    r_update(cdata);
+    this.update();
 }
 
-function r_update(cdata) {
-    cdata.forEach(function(cd) {
-        cd.setVisibility(cd.enabled);
-    });
+RepresentationGroup.prototype.update = function() {
+    // Update representation visilibity
+    if(!this.enabled) this.hideall();
+    else {
+        this.reprList.forEach(function(cd) {
+            cd.setVisibility(cd.enabled);
+        });
+    }
 }
 
-function r_set_selection(sele, comps) {
-    comps.forEach(function(c) {c.setSelection(sele);});
-    return comps;
-}
-
-function r_GUI(cdata, label, name) {
+RepresentationGroup.prototype.GUI = function(class_name) {
     /*
+     * Write HTML to control the visibility of this group.
      *
+     * "class_name" is the class used for the container DIV.
      */
-    if(cdata == undefined) return;
-    var c = $("<div/>", {"class": name});
+    var self = this,
+        c = $("<div/>", {"class": class_name})
+    
     c.append($("<div/>").append(
         $("<input/>", {"type": "checkbox",
-                       "id": name,
+                       "id": class_name,
                        "checked": true})
-            .click(function(e) {r_toggle(cdata, this.checked);}),
-        $("<label/>", {"for": name}).append(label)
+            .click(function(e) {self.toggle(this.checked);}),
+        $("<label/>", {"for": class_name}).append(this.name)
     ));
     
     // Enable first (only) representation
-    cdata[0].enabled = true;
+    this.reprList[0].enabled = true;
     
-    if(cdata.length > 1) {
+    if(this.reprList.length > 1) {
         var d = $("<div/>", {"class":"naradio"}),
-            radioname = name+"radio";
-        cdata.forEach(function(cd, i) {
+            radioname = class_name+"radio";
+        this.reprList.forEach(function(cd, i) {
             cd.enabled = (i == 0) ? true : false;
             d.append($("<span/>").append(
                 $("<input/>", {"type": "radio",
                                "name": radioname,
                                "id": radioname+"_"+i,
                                "checked": i==0})
-                    .click(function(e) {r_enable(cdata, i);}),
+                    .click(function(e) {self.enable(i);}),
                 $("<label/>", {"for": radioname+"_"+i}).append(capitalize(cd.name)),
                 "&nbsp;"
                 ));
         });
         c.append(d);
     }
-    r_update(cdata);
+    this.update();
     return c;
 }
 
