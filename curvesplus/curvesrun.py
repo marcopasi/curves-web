@@ -136,7 +136,7 @@ class CurvesConfiguration(Configuration):
 #---
 class WebCurvesConfiguration(CurvesConfiguration):
     """ Configuration of a web-site Curves+ run. """
-    viewer = True
+    viewer = 'ngl'
 
 
 #---
