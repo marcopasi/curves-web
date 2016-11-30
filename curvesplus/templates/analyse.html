@@ -85,7 +85,7 @@
   </div>
   
   <div class="col-md-7">
-    {% if options.viewer %}
+    {% if options.viewer == 'ngl' %}
     <!-- NGL for Curves+ -->
     <!-- version 0.1 -->
     <script type="text/javascript" src="{{
@@ -110,6 +110,8 @@
     <p>NGL viewer: left-click to rotate, scroll to zoom and right-click to translate. See the NGL <a href="https://github.com/arose/ngl">github</a> page.
     </p>
     </div>
+    {% elif options.viewer == 'jsmol' %}
+    <p>JSMOL.</p>
     {% else %}
     <p>Enable the 3D viewer to visualise results on this page.</p>
     {% endif %}
