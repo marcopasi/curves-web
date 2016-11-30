@@ -107,10 +107,12 @@ def success_response(run, conf=None):
     files = {}
     extensions = []
     for ext in run.output_extensions:
-        if not os.path.isfile(run.output_file(ext)): continue
-        files[ext] = OutputFile(run.output_file(ext),
-                                run.output_url(ext),
-                                run.outfile+ext, ext)
+        if not os.path.isfile(run.output_file(ext)):
+            files[ext] = None
+        else:
+            files[ext] = OutputFile(run.output_file(ext),
+                                    run.output_url(ext),
+                                    run.outfile+ext, ext)
     files["in"] = OutputFile(
         os.path.join(run.outdir, run.infile),
         run.urlbase+"/"+run.infile,
@@ -210,7 +212,11 @@ def analyse():
     except AssertionError as e:
         raise e
     except Exception as e:
-        flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
+        if app.config["DEBUG"]:
+            import traceback
+            traceback.print_exc()
+        else:
+            flash("An error occured: Please try again. (ERROR: %s)"%e, 'danger')
     return render_template('prepare.html', form=form)
 
 

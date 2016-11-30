@@ -11,8 +11,8 @@ The Curves+ run configuration form.
 
 from flask.ext.wtf import Form
 from wtforms import Form as UnsecureForm
-from wtforms.fields import TextField, BooleanField, \
-     RadioField, FloatField, FormField, FieldList, IntegerField
+from wtforms.fields import TextField, BooleanField, RadioField, \
+     FloatField, FormField, FieldList, IntegerField, SelectField
 from wtforms.validators import Required, Length, regexp, \
      ValidationError, StopValidation
 from flask.ext.wtf.file import FileRequired, FileAllowed, FileField
@@ -59,7 +59,7 @@ class CurvesForm(Form):
     #test = BooleanField('Test')
     boolean_fields = 'fit circ line zaxe refo'.split()
 
-    viewer = BooleanField('3D Viewer')
+    viewer = SelectField('3D Viewer', choices=[('jsmol', 'JSmol (slow but fully featured)'), ('ngl', 'NGL (fast and simple)'), ('none', 'None (output files and plots)')])
     
     back  = TextField('Back',  [Required(), Length(min=1, max=64)])
     wback = FloatField('Wback', [Required()])
