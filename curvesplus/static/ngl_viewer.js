@@ -271,12 +271,23 @@ RepresentationGroup.prototype.update = function() {
     }
 }
 
+RepresentationGroup.prototype.all_empty = function() {
+    // Check if all representations in group are empty
+    return this.reprList.every(function(repr) {
+        return repr.repr.structureView.atomCount == 0;
+    });
+}
+
 RepresentationGroup.prototype.GUI = function(class_name) {
     /*
      * Write HTML to control the visibility of this group.
      *
      * "class_name" is the class used for the container DIV.
      */
+    
+    // If all the representation are empty, return empty GUI
+    if(this.all_empty()) return null;
+    
     var self = this,
         c = $("<div/>", {"class": class_name})
     
