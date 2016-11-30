@@ -2,6 +2,7 @@
 
 {% block scripts %}
 {{super()}}
+<script src="https://unpkg.com/imagesloaded@4.1/imagesloaded.pkgd.min.js"></script>
 <script type="text/javascript">
   $("#plots_selector").change(function(){
     /* Activate carousel on change */
@@ -17,10 +18,12 @@
     var option = select.children("[data-slide-to="+destination+"]")[0];
     select.val(option.value);
   });
-  $("#plots img").load(function() {
-      console.log(this);
-      $(this).css("display", "block");
-  });
+  $("#plots").imagesLoaded()
+    .progress(function(instance, image) {
+        console.log(image);
+        if(image.isLoaded)
+            $(image.img).css("display", "block");
+    });
 </script>
 {% endblock %}
 
