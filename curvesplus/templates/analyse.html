@@ -17,10 +17,9 @@
     var option = select.children("[data-slide-to="+destination+"]")[0];
     select.val(option.value);
   });
-  $(document).ready(function() {
-      $("#plots img").load(function() {
-          $(this).css("display", "block");
-      });
+  $("#plots img").load(function() {
+      console.log(this);
+      $(this).css("display", "block");
   });
 </script>
 {% endblock %}
