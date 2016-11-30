@@ -20,7 +20,6 @@
   });
   $("#plots").imagesLoaded()
     .progress(function(instance, image) {
-        console.log(image);
         if(image.isLoaded)
             $(image.img).css("display", "block");
     });

@@ -72,7 +72,6 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
         // Write GUI for RepresentationGroups
         // in specific containers, in a specific order.
         function(RGdata) {
-            console.log(RGdata);
             var lc = $("#"+"lcontrols");
             lc.append(RGdata["Nucleic Acid"].GUI("nadisplay"),
                       RGdata["Axis"].GUI("axdisplay"),
