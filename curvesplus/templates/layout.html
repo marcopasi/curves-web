@@ -9,8 +9,17 @@
       href="{{url_for('.static', filename='style.css')}}">
 {% endblock %}
 
-{% block scripts %}
+{% block head %}
 {{super()}}
+{% block head_scripts %}
+<script src="{{bootstrap_find_resource('jquery.js', cdn='jquery')}}"></script>
+{% endblock %}
+{% endblock %}
+
+
+{% block scripts %}
+{# Don't get jquery here, but in head_scripts #}
+<script src="{{bootstrap_find_resource('js/bootstrap.js', cdn='bootstrap')}}"></script>  
 {{google.uanalytics('UA-47865400-2')}}
 {% endblock %}
 
