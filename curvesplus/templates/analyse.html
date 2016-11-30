@@ -87,7 +87,7 @@
   <div class="col-md-7">
     {% if options.viewer == 'ngl' %}
     <!-- NGL for Curves+ -->
-    <!-- version 0.1 -->
+    <!-- version 0.3 -->
     <script type="text/javascript" src="{{
 					url_for('.static', filename='vendor/ngl.js') }}"></script>
     <script type="text/javascript" src="{{
@@ -105,13 +105,35 @@
       <div id="lcontrols" class="lcontrols col-md-6"></div>
       <div id="rcontrols" class="rcontrols col-md-6"></div>
     </div>
-    <!-- /NGL -->
     <div class="helpline">
     <p>NGL viewer: left-click to rotate, scroll to zoom and right-click to translate. See the NGL <a href="https://github.com/arose/ngl">github</a> page.
     </p>
     </div>
+    <!-- /NGL -->
     {% elif options.viewer == 'jsmol' %}
-    <p>JSMOL.</p>
+    <!-- Jmol for Curves+ -->
+    <!-- version 1.3 -->
+    <div class="jmol">
+      <form id="jmol">
+        <script type="text/javascript" src="{{
+                                          url_for('.static', filename='vendor/JSmol.min.js') }}"></script>
+        <script type="text/javascript" src="{{
+                                          url_for('.static', filename='vendor/Jmol2.js') }}"></script>
+        <script type="text/javascript" src="{{
+                                          url_for('.static', filename='jmol_viewer.js') }}"></script>
+        <script type="text/javascript">
+          jmol_viewer("{{ files['_X.pdb'].url }}",
+                      "{{ files['_B.pdb'].url }}",
+                      "{{ files['_R.pdb'].url }}",
+                      "{{ files['in'].url }}");
+        </script>
+      </form>
+    </div>
+    <div class="helpline">
+    <p>Jmol viewer: left-click to rotate, shift-left-click to zoom or z-rotate and ctrl-right-click to translate. See <a href="http://www.jmol.org">http://www.jmol.org/</a>.
+    </p>
+    </div>
+    <!-- /Jmol -->
     {% else %}
     <p>Enable the 3D viewer to visualise results on this page.</p>
     {% endif %}
