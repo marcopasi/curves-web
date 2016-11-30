@@ -86,27 +86,28 @@
   
   <div class="col-md-7">
     {% if options.viewer %}
-    <!-- Jmol for Curves+ -->
-    <!-- version 1.3 -->
-    <div class="jmol">
-      <form id="jmol">
-	<script type="text/javascript" src="{{
-					  url_for('.static', filename='vendor/JSmol.min.js') }}"></script>
-	<script type="text/javascript" src="{{
-					  url_for('.static', filename='vendor/Jmol2.js') }}"></script>
-	<script type="text/javascript" src="{{
-					  url_for('.static', filename='jmol_viewer.js') }}"></script>
-	<script type="text/javascript">
-          jmol_viewer("{{ files['_X.pdb'].url }}",
-                      "{{ files['_B.pdb'].url }}",
-                      "{{ files['_R.pdb'].url }}",
-                      "{{ files['in'].url }}");
-	</script>
-      </form>
+    <!-- NGL for Curves+ -->
+    <!-- version 0.1 -->
+    <script type="text/javascript" src="{{
+					url_for('.static', filename='vendor/ngl.js') }}"></script>
+    <script type="text/javascript" src="{{
+					url_for('.static', filename='ngl_viewer.js') }}"></script>
+    <script type="text/javascript">
+      document.addEventListener( "DOMContentLoaded", function() {
+          ngl_viewer("{{ files['_X.pdb'].url }}",
+                     "{{ files['_B.pdb'].url }}",
+                     "{{ files['_R.pdb'].url }}",
+                     "{{ files['in'].url }}");
+      });
+    </script>
+    <div id="viewport" style="width:95%; height:400px;"></div>
+    <div class="controls row">
+      <div id="lcontrols" class="lcontrols col-md-6"></div>
+      <div id="rcontrols" class="rcontrols col-md-6"></div>
     </div>
-    <!-- /Jmol -->
+    <!-- /NGL -->
     <div class="helpline">
-    <p>Jmol viewer: left-click to rotate, shift-left-click to zoom or z-rotate and ctrl-right-click to translate. See <a href="http://www.jmol.org">http://www.jmol.org/</a>.
+    <p>NGL viewer: ....</a>.
     </p>
     </div>
     {% else %}
