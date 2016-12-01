@@ -35,7 +35,7 @@ var BGCOLORS =["lightgray","white","black","powderblue"];
 var DEBUG = false;
 
 /* GLOBALS */
-var stage, repdata, dna_axis, orientation;
+var stage, repdata, dna_axis, orientation, zoom;
 
 
 /*************************
@@ -74,8 +74,9 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
 
     // Wall: resolve all RepresentationGroups
     Promise.all([pdbRG, axRG, bbRG, crRG]).then(function(RG) {
-        // Get initial orientation
+        // Get initial orientation and zoom
         orientation = stage.viewer.getOrientation();
+        zoom = stage.viewer.camera.zoom;
         // Aggregate RepresentationGroups in repdata
         RG.forEach(function(rep) {$.extend(repdata, rep);});
         return repdata;
@@ -137,9 +138,10 @@ function GUI_extras() {
         rotateCameraAxisAngle(cc(new NGL.Vector3(1,0,0)), -Math.PI/2)
     }
 
-    // requires previously defined initial orientation
+    // requires previously defined initial orientation and zoom
     function orient() {
         // reset orientation to initial
+        stage.viewer.camera.zoom = zoom;
         stage.viewer.setOrientation(orientation);
     }
     
