@@ -8,7 +8,7 @@
  */
 
 /**** NGL for Curves+
-  * version 0.6
+  * version 0.7
   ****/
 
 /**** Changelog
@@ -18,6 +18,7 @@
  * v0.4		Reset orientation to initial
  * v0.5		Spin wrt/ Axis
  * v0.6		Align Axis vertical
+ * v0.7		Screenshot button added
  ****/
 
 /**** TODO
@@ -103,7 +104,14 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
             if(RGdata["Protein"])
                 rc.append(RGdata["Protein"].GUI("prodisplay"));
             rc.append(GUI_extras(RGdata["Axis"]));
+            more_GUI_extras();
         });
+
+    window.addEventListener(
+        "resize", function( event ){
+            stage.handleResize();
+        }, false
+    );
 }
 
 /*************************
@@ -172,6 +180,30 @@ function GUI_extras(axis) {
             .click(spin));
 
     return [cdiv, ddiv];
+}
+
+function more_GUI_extras() {
+    // More Buttons
+    function image() {
+        var fname = "screenshot.png"
+        stage.makeImage({
+            factor: 4,
+            antialias: true,
+            trim: false,
+            transparent: false
+        }).then( function( blob ){
+            NGL.download( blob, fname );
+        });
+    }
+    
+    var ediv = $("<div/>", {"style": "position:absolute; bottom: 5px; right: 5px;"});
+    ediv.append(
+        $("<img/>", {"src": "/static/img/camera.svg",
+                     "width": "25px"})
+            .click(image));
+    $(stage.viewer.container)
+        .css("position", "relative")
+        .append(ediv);    
 }
 
 /*************************
