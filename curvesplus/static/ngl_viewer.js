@@ -8,7 +8,7 @@
  */
 
 /**** NGL for Curves+
-  * version 0.5
+  * version 0.6
   ****/
 
 /**** Changelog
@@ -17,11 +17,11 @@
  * v0.3		RepresentationGroups API simplify GUI creation
  * v0.4		Reset orientation to initial
  * v0.5		Spin wrt/ Axis
+ * v0.6		Align Axis vertical
  ****/
 
 /**** TODO
  * - variable groove number
- * - align Axis vertical
  */
 
 
@@ -114,20 +114,27 @@ function GUI_extras() {
     
     function spin() {
         // spin stage around DNA axis
-        var camera = stage.viewer.camera,
-            raxis = dna_axis.clone().applyQuaternion(camera.quaternion);
         if(stage.spin) {
-            stage.setSpin(null, 0);
+            stage.viewer.setSpin(undefined, 0);
             stage.spin = undefined
         } else {
-            stage.setSpin(invcc(dna_axis), Math.PI/120);
+            stage.viewer.setSpin(undefined, Math.PI/120);
             stage.spin = true;
         }
     }
 
+    stage.viewer.setSpin(undefined, 0); // set no spinning
+    // Keep spinning axis aligned with DNA axis
+    function setspin() {
+        stage.viewer.setSpin(invcc(dna_axis), undefined);
+    }
+    stage.viewer.controls.addEventListener("change", setspin);
+    setspin();                  // set axis first time
+    
     function align() {
         //XXX aligns axis horizontal
         rotateCameraTo(dna_axis);
+        rotateCameraAxisAngle(cc(new NGL.Vector3(1,0,0)), -Math.PI/2)
     }
 
     // requires previously defined initial orientation
