@@ -104,7 +104,7 @@ console;set debug ON;\
     /*
      * Check that the AX file is present; otherwise push the index for PDB and BB one up
      */
-    if(typeof(AXPATH) != "undefined") {
+    if(AXPATH != "") {
         axf = ++curframe;
         // calculate AXis rotation only if present
         loadax = "load \""+AXPATH+"\"; \
@@ -125,7 +125,7 @@ AyQ = !quaternion(cross({0 1 0},vf), acos({0 1 0}*vf));"
     /*
      * Check that the BB file is present; otherwise push the index for the PDB one up
      */
-    if(typeof(BBPATH) != "undefined") {
+    if(BBPATH != "") {
         bbf = ++curframe;
         loadbb = "load "+append+" \""+BBPATH+"\"; \
 select */"+bbf+"; \
@@ -140,7 +140,7 @@ color gray;";
     /*
      * Check that the CR file is present; otherwise push the index for PDB and BB one up
      */
-    if(typeof(CRPATH) != "undefined") {
+    if(CRPATH != "") {
         crf = ++curframe;
         loadcr = "load "+append+" \""+CRPATH+"\"; \
 select */"+crf+"; \

@@ -48,13 +48,12 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
 
     // Create RepresentationGroups for the input PDB
     var pdbRG = stage.loadFile(PDBPATH)
-        .then(function(c) {return c.centerView();})
         .then(do_input, error);
 
     var axRG, bbRG, crRG;
     // Define dummy axis if we lack one
     dna_axis = new NGL.Vector3(0,1,0);
-    if(typeof(AXPATH) != "undefined") {
+    if(AXPATH != "") {
         // Create RepresentationGroups for the axis PDB
         axRG = stage.loadFile(AXPATH)
             .then(function(c) {
@@ -62,12 +61,14 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
                 dna_axis = get_axis(c.structure);
                 return c.centerView();})
             .then(do_ax, error);
+    } else {
+        pdbRG.then(function(rg) {rg["Nucleic Acid"].component.centerView(); return rg;});
     }
-    if(typeof(BBPATH) != "undefined") {
+    if(BBPATH != "") {
         // Create RepresentationGroups for the backbone PDB
         bbRG = stage.loadFile(BBPATH).then(do_bb, error);
     }
-    if(typeof(CRPATH) != "undefined") {
+    if(CRPATH != "") {
         // Create RepresentationGroups for the curvature PDB
         crRG = stage.loadFile(CRPATH).then(do_cr, error);
     }
@@ -85,22 +86,30 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
         // in specific containers, in a specific order.
         function(RGdata) {
             var lc = $("#"+"lcontrols");
-            lc.append(RGdata["Nucleic Acid"].GUI("nadisplay"),
-                      RGdata["Axis"].GUI("axdisplay"),
-                      RGdata["Backbone"].GUI("bbdisplay"),
-                      RGdata["Groove12"].GUI("gr1display"),
-                      RGdata["Groove21"].GUI("gr2display"),
-                      RGdata["Curvature"].GUI("crdisplay"));
+            if(RGdata["Nucleic Acid"])
+                lc.append(RGdata["Nucleic Acid"].GUI("nadisplay"));
+            if(RGdata["Axis"])
+                lc.append(RGdata["Axis"].GUI("axdisplay"));
+            if(RGdata["Backbone"])
+                lc.append(RGdata["Backbone"].GUI("bbdisplay"));
+            if(RGdata["Groove12"])
+                lc.append(RGdata["Groove12"].GUI("gr1display"));
+            if(RGdata["Groove21"])
+                lc.append(RGdata["Groove21"].GUI("gr2display"));
+            if(RGdata["Curvature"])
+                lc.append(RGdata["Curvature"].GUI("crdisplay"));
+            
             var rc = $("#"+"rcontrols");
-            rc.append(RGdata["Protein"].GUI("prodisplay"));
-            rc.append(GUI_extras());
+            if(RGdata["Protein"])
+                rc.append(RGdata["Protein"].GUI("prodisplay"));
+            rc.append(GUI_extras(RGdata["Axis"]));
         });
 }
 
 /*************************
  * Define extra GUI elements.
  */
-function GUI_extras() {
+function GUI_extras(axis) {
     // Background
     var cdiv = $("<div/>", {"class": "colors"});
     cdiv.append("Background: ");
@@ -112,6 +121,8 @@ function GUI_extras() {
                     .css("background-color", c)
                     .click(function(e) {stage.viewer.setBackground(c);})));
     });
+
+    if(!axis) return cdiv;
     
     function spin() {
         // spin stage around DNA axis
