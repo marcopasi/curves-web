@@ -8,19 +8,20 @@
  */
 
 /**** NGL for Curves+
-  * version 0.3
+  * version 0.5
   ****/
 
 /**** Changelog
  * v0.1		First draft
  * v0.2		Reproduce 90% capabilities of the Jmol viewer
  * v0.3		RepresentationGroups API simplify GUI creation
+ * v0.4		Reset orientation to initial
+ * v0.5		Spin wrt/ Axis
  ****/
 
 /**** TODO
  * - variable groove number
- * - align and spin wrt Axis
- * - reset orientation to initial
+ * - align Axis vertical
  */
 
 
@@ -34,9 +35,12 @@ var BGCOLORS =["lightgray","white","black","powderblue"];
 var DEBUG = false;
 
 /* GLOBALS */
-var stage, repdata;
+var stage, repdata, dna_axis, orientation;
 
-/* Create the viewer */
+
+/*************************
+ * Create the viewer
+ */
 function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
     repdata = {};
     stage = new NGL.Stage("viewport",
@@ -48,10 +52,15 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
         .then(do_input, error);
 
     var axRG, bbRG, crRG;
+    // Define dummy axis if we lack one
+    dna_axis = new NGL.Vector3(0,1,0);
     if(typeof(AXPATH) != "undefined") {
         // Create RepresentationGroups for the axis PDB
         axRG = stage.loadFile(AXPATH)
-            .then(function(c) {return c.centerView();})
+            .then(function(c) {
+                // Get Axis approximate axis
+                dna_axis = get_axis(c.structure);
+                return c.centerView();})
             .then(do_ax, error);
     }
     if(typeof(BBPATH) != "undefined") {
@@ -65,6 +74,8 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
 
     // Wall: resolve all RepresentationGroups
     Promise.all([pdbRG, axRG, bbRG, crRG]).then(function(RG) {
+        // Get initial orientation
+        orientation = stage.viewer.getOrientation();
         // Aggregate RepresentationGroups in repdata
         RG.forEach(function(rep) {$.extend(repdata, rep);});
         return repdata;
@@ -85,9 +96,10 @@ function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
         });
 }
 
+/*************************
+ * Define extra GUI elements.
+ */
 function GUI_extras() {
-    /* Define extra GUI elements.
-     */
     // Background
     var cdiv = $("<div/>", {"class": "colors"});
     cdiv.append("Background: ");
@@ -100,27 +112,50 @@ function GUI_extras() {
                     .click(function(e) {stage.viewer.setBackground(c);})));
     });
     
+    function spin() {
+        // spin stage around DNA axis
+        var camera = stage.viewer.camera,
+            raxis = dna_axis.clone().applyQuaternion(camera.quaternion);
+        if(stage.spin) {
+            stage.setSpin(null, 0);
+            stage.spin = undefined
+        } else {
+            stage.setSpin(invcc(dna_axis), Math.PI/120);
+            stage.spin = true;
+        }
+    }
+
+    function align() {
+        //XXX aligns axis horizontal
+        rotateCameraTo(dna_axis);
+    }
+
+    // requires previously defined initial orientation
+    function orient() {
+        // reset orientation to initial
+        stage.viewer.setOrientation(orientation);
+    }
+    
     // Buttons
     var ddiv = $("<div/>", {"class": "buttons"});
-    ddiv.append($("<input/>", {"type": "button",
-                               "value": "Center"})
-                .click(function(e) {stage.centerView();}),
-                $("<br/>"),
-                $("<input/>", {"type": "button",
-                               "value": "Spin"})
-                .click(function(e) {
-                    if(stage.spin) {
-                        stage.setSpin(null, 0);
-                        stage.spin = undefined
-                    } else {
-                        stage.spin = true;
-                        stage.setSpin([0,1,0], .01);
-                    }}));
+    ddiv.append(
+        $("<input/>", {"type": "button",
+                       "value": "Reset orientation"})
+            .click(orient),
+        $("<br/>"),
+        $("<input/>", {"type": "button",
+                       "value": "Align Axis"})
+            .click(align),
+        $("<br/>"),
+        $("<input/>", {"type": "button",
+                       "value": "Spin"})
+            .click(spin));
 
     return [cdiv, ddiv];
 }
 
-/* Representation callbacks
+/*************************
+ * Representation callbacks
  *
  * Configure representations here.
  * Each method creates a dictionary of RepresentationGroups, one
@@ -190,7 +225,8 @@ function do_cr(comp) {
     };
 }
 
-/* Representation groups API
+/*************************
+ * Representation groups API
  */
 RepresentationGroup = function(component, name, selection = null, representations = null, 
                                defaultParameters = {}) {
@@ -322,12 +358,110 @@ RepresentationGroup.prototype.GUI = function(class_name) {
     return c;
 }
 
-/* Promise functions */
+/*************************
+ * Promise functions
+ */
 function error(err) {
     console.log(err);
 }
 
-/* Utilities */
+/*************************
+ * Utilities
+ */
 function capitalize(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function get_axis(structure) {
+    var atoms = structure.atomStore,
+        n = atoms.count-1,
+        x = atoms.x[0] - atoms.x[n],
+        y = atoms.y[0] - atoms.y[n],
+        z = atoms.z[0] - atoms.z[n];
+    return new NGL.Vector3(x,y,z).normalize();
+}
+
+function rotateCameraTo(end) {
+    var camera = stage.viewer.camera,
+        start = camera.getWorldDirection(),
+        target = stage.viewer.controls.target;
+
+    var angle = Math.acos(start.dot(end) / start.length() / end.length()),
+        raxis = (new NGL.Vector3()).crossVectors(start, end).normalize();
+    
+    return rotateCameraAxisAngle(raxis, angle, target);
+}
+
+function rotateCameraAxisAngle(axis, angle, target) {
+    if (!angle) return;
+    if (!target) target = stage.viewer.controls.target;
+    
+    var camera = stage.viewer.camera,
+        _eye = new NGL.Vector3();
+
+    var quaternion = (new NGL.Quaternion()).setFromAxisAngle(axis, angle);
+    // rotate the distance vector (_eye)
+    _eye.subVectors(camera.position, target);
+    _eye.applyQuaternion(quaternion);
+    // rotate the camera's up vector
+    camera.up.applyQuaternion(quaternion);
+    // re-apply rotated distance to camera
+    camera.position.addVectors(_eye, target);
+    // reorient camera towards target
+    camera.lookAt(target);
+}
+
+function cc(axis) {
+    var camera = stage.viewer.camera,
+        controls = stage.viewer.controls;
+
+    var eye = (new NGL.Vector3()).copy( camera.position ).sub( controls.target ),
+        eyeDirection = (new NGL.Vector3()).copy( eye ).normalize(),
+        upDirection = (new NGL.Vector3()).copy( camera.up ).normalize(),
+        sidewaysDirection = (new NGL.Vector3()).crossVectors( upDirection, eyeDirection ).normalize(),
+        moveDirection = new NGL.Vector3();
+    
+    // console.log("  s=[", sidewaysDirection.toArray().toString(),
+    //             "]; u=[", upDirection.toArray().toString(),
+    //             "]; e=[", eyeDirection.toArray().toString(),
+    //             "];");
+
+    /*
+     * The following operations are equivalent to:
+     * 
+     * moveDirection = M*axis
+     *
+     * where M is defined as follows:
+     */
+    
+    var M = (new NGL.Matrix4()).makeBasis(sidewaysDirection, upDirection.clone().negate(), eyeDirection);
+    
+    eyeDirection.setLength( axis.z );
+    upDirection.setLength( axis.y );
+    sidewaysDirection.setLength( axis.x );
+
+    // console.log("S", sidewaysDirection,
+    //             "U", upDirection,
+    //             "E", eyeDirection);
+    
+    moveDirection.copy( sidewaysDirection.sub( upDirection ).add( eyeDirection ) );
+
+    // console.log("D",moveDirection2axis.clone().applyMatrix4(M).normalize().sub(moveDirection));
+    
+    return moveDirection;
+}
+
+function invcc(axis) {
+    // Implement inverse operation performed in NGL.Viewer.rotate
+    // to directly define axis.
+    var camera = stage.viewer.camera,
+        controls = stage.viewer.controls;
+
+    var eye = (new NGL.Vector3()).copy( camera.position ).sub( controls.target ),
+        eyeDirection = (new NGL.Vector3()).copy( eye ).normalize(),
+        upDirection = (new NGL.Vector3()).copy( camera.up ).normalize(),
+        sidewaysDirection = (new NGL.Vector3()).crossVectors( upDirection, eyeDirection ).normalize();
+    
+    var M = (new NGL.Matrix4()).makeBasis(sidewaysDirection, upDirection.clone().negate(), eyeDirection);
+    return axis.clone().applyMatrix4(M.transpose()).normalize();
 }
