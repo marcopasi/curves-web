@@ -8,7 +8,7 @@
  */
 
 /**** NGL for Curves+
-  * version 0.7
+  * version 0.9
   ****/
 
 /**** Changelog
@@ -19,10 +19,13 @@
  * v0.5		Spin wrt/ Axis
  * v0.6		Align Axis vertical
  * v0.7		Screenshot button added
+ * v0.8		color by nucleotide
+ * v0.9		Debugged Safari download with hack (see TODO)
  ****/
 
 /**** TODO
  * - variable groove number
+ * - remove Safari Hack for image download when Safari supports download file name setting (see webkit bug 102914).
  */
 
 
@@ -45,7 +48,8 @@ var stage, repdata, dna_axis, orientation, zoom;
 function ngl_viewer(AXPATH, BBPATH, CRPATH, PDBPATH) {
     repdata = {};
     stage = new NGL.Stage("viewport",
-                          {"cameraType": "orthographic"});
+                          {"cameraType": "orthographic",
+                           "backgroundColor": "white"});
 
     // Create RepresentationGroups for the input PDB
     var pdbRG = stage.loadFile(PDBPATH)
@@ -182,9 +186,23 @@ function GUI_extras(axis) {
     return [cdiv, ddiv];
 }
 
+function safariw(data, target) {
+    var url = URL.createObjectURL( data );
+    target.location.href = url;
+}
+
 function more_GUI_extras() {
+    // Safari Hack: open image in new window
+    if( typeof window === "undefined" ) return false;
+    var ua = window.navigator.userAgent,
+        isSafari = ( /Safari/i.test( ua ) ),
+        safariwin = null;
     // More Buttons
     function image() {
+        if(isSafari) { // Safari Hack: open window early, otherwise Safari will block it!
+            safariwin = window.open();
+            safariwin.document.write("<html><head><link rel='stylesheet' href='/static/style.css'></head><body><h1>Curves+ web server</h1><h3>Thank you for your patience...</h3>Please wait while screenshot is being created. This may take a few seconds...</body></html>")
+        }
         var fname = "screenshot.png"
         stage.makeImage({
             factor: 4,
@@ -192,10 +210,13 @@ function more_GUI_extras() {
             trim: false,
             transparent: false
         }).then( function( blob ){
-            NGL.download( blob, fname );
+            if(isSafari) { // Safari Hack: set new window URL to image
+                return safariw(blob, safariwin);
+            }
+            return NGL.download( blob, fname );
         });
     }
-    
+
     var ediv = $("<div/>", {"style": "position:absolute; bottom: 5px; right: 5px;"});
     ediv.append(
         $("<img/>", {"src": "/static/img/camera.svg",
@@ -203,7 +224,7 @@ function more_GUI_extras() {
             .click(image));
     $(stage.viewer.container)
         .css("position", "relative")
-        .append(ediv);    
+        .append(ediv);
 }
 
 /*************************
@@ -216,64 +237,89 @@ function more_GUI_extras() {
  *
  */   
 function do_input(comp) {
+    var lowsaturation = //RGBYC
+        [0xE6BEBE, 0xBEE6BE, 0xBEBEE6, 0xE6E6AA, 0xBEE6E6];
+    var higsaturation = //RGBYC
+        [0xFF7070, 0xA0FFA0, 0xA0A0FF, 0xFFFF70, 0x70FFFF];
+    var rgbyc = higsaturation;
+    var NDBColors = NGL.ColorMakerRegistry.addSelectionScheme( [ // A red, T blue, C yellow, G green, and U cyan. 
+        [rgbyc[0],"DA or A"],
+        [rgbyc[1],"DG or G"],
+        [rgbyc[2],"DT"],
+        [rgbyc[3],"DC or C"],
+        [rgbyc[4],"U"],
+        ["gray","*"]
+    ]);
     return {
         // Nucleic
         "Nucleic Acid":
-        new RepresentationGroup(comp, "Nucleic Acid", "nucleic",
-                      [comp.addRepresentation( "licorice",   {"colorScheme": "uniform",
-                                                              "colorValue":  "gray"}),
-                       comp.addRepresentation( "ball+stick", {"colorScheme": "element"}),
-                       comp.addRepresentation( "spacefill",  {"colorScheme": "uniform",
-                                                              "colorValue":  "yellow"})]),
+        new RepresentationGroup(comp, "Nucleic Acid", "nucleic")
+            .addRepresentation( "Gray",
+                                comp.addRepresentation( "licorice",   {"colorScheme": "uniform",
+                                                                       "colorValue":  "gray"}))
+            .addRepresentation( "Color",
+                                comp.addRepresentation( "licorice",   {"colorScheme": NDBColors}))
+            .addRepresentation( "Ball&Stick",
+                                comp.addRepresentation( "ball+stick", {"colorScheme": "element"}))
+            .addRepresentation( "Surface",
+                                comp.addRepresentation( "surface",    {"colorScheme": "uniform",
+                                                                       "colorValue":  "yellow"})),
         // Protein
         "Protein":
-        new RepresentationGroup(comp, "Protein", "protein",
-                      [comp.addRepresentation( "cartoon", {"colorScheme":   "uniform",
-                                                           "colorValue":    "steelblue"}),
-                       comp.addRepresentation( "licorice", {"colorScheme":  "element"}),
-                       comp.addRepresentation( "spacefill", {"colorScheme": "uniform",
-                                                             "colorValue":  "deepskyblue"})])
+        new RepresentationGroup(comp, "Protein", "protein")
+            .addRepresentation( "Cartoon",
+                                comp.addRepresentation( "cartoon",  {"colorScheme":   "uniform",
+                                                                    "colorValue":    "steelblue"}))
+            .addRepresentation( "Wire",
+                                comp.addRepresentation( "licorice", {"colorScheme":  "element"}))
+            .addRepresentation( "Surface",
+                                comp.addRepresentation( "surface",  {"colorScheme": "uniform",
+                                                                        "colorValue":  "deepskyblue"}))
     };
 }
 
 function do_ax(comp) {
     return {
         "Axis":
-        new RepresentationGroup(comp, "Axis", null,
-                                [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                      "colorValue":  "blue",
-                                                                      "radius":      AWF})])
+        new RepresentationGroup(comp, "Axis", null)
+            .addRepresentation( null,
+                               comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                    "colorValue":  "blue",
+                                                                    "radius":      AWF}))
     };
 }
 
 function do_bb(comp) {
     return {
         "Backbone": 
-        new RepresentationGroup(comp, "Backbone", "(:A or :B)",
-                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                            "colorValue":  "red",
-                                                            "radius":      BWF})]),
+        new RepresentationGroup(comp, "Backbone", "(:A or :B)")
+            .addRepresentation(null,
+                               comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                    "colorValue":  "red",
+                                                                    "radius":      BWF})),
         "Groove12": 
-        new RepresentationGroup(comp, "Groove12", ":C",
-                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                            "colorValue":  "lawngreen",
-                                                            "radius":      GWF})]),
+        new RepresentationGroup(comp, "Groove12", ":C")
+            .addRepresentation(null,
+                               comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                    "colorValue":  "mediumvioletred",
+                                                                    "radius":      GWF})),
         "Groove21": 
-        new RepresentationGroup(comp, "Groove21", ":D",
-                      [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                            "colorValue":  "orange",
-                                                            "radius":      GWF})]),
-        
+        new RepresentationGroup(comp, "Groove21", ":D")
+            .addRepresentation(null,
+                               comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                    "colorValue":  "orange",
+                                                                    "radius":      GWF})),
     };
 }
 
 function do_cr(comp) {
     return {
         "Curvature":
-        new RepresentationGroup(comp, "Curvature", null,
-                                [comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                      "colorValue":  "blue",
-                                                                      "radius":      CWF})])
+        new RepresentationGroup(comp, "Curvature", null)
+            .addRepresentation(null,
+                               comp.addRepresentation( "licorice", {"colorScheme": "uniform",
+                                                                    "colorValue":  "blue",
+                                                                    "radius":      CWF}))
     };
 }
 
@@ -312,11 +358,12 @@ RepresentationGroup = function(component, name, selection = null, representation
     var self = this;
     if(representations) 
         representations.forEach(function(repr) {
-            self.addRepresentation(repr);
+            self.addRepresentation(null, repr);
         });
 };
 
-RepresentationGroup.prototype.addRepresentation = function(repr) {
+RepresentationGroup.prototype.addRepresentation = function(display_name, repr) {
+    repr.display_name = display_name;
     // Apply default parameters
     repr.setParameters(this.defaultParameters);
     // Set selection if defined
@@ -325,6 +372,7 @@ RepresentationGroup.prototype.addRepresentation = function(repr) {
     // Hide initially
     repr.setVisibility(false);
     this.reprList.push(repr);
+    return this;
 }
     
 RepresentationGroup.prototype.toggle = function(checked) {
@@ -400,7 +448,7 @@ RepresentationGroup.prototype.GUI = function(class_name) {
                                "id": radioname+"_"+i,
                                "checked": i==0})
                     .click(function(e) {self.enable(i);}),
-                $("<label/>", {"for": radioname+"_"+i}).append(capitalize(cd.name)),
+                $("<label/>", {"for": radioname+"_"+i}).append(capitalize(cd.display_name)),
                 "&nbsp;"
                 ));
         });
