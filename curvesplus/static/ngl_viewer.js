@@ -195,8 +195,9 @@ function more_GUI_extras() {
     // Safari Hack: open image in new window
     if( typeof window === "undefined" ) return false;
     var ua = window.navigator.userAgent,
-        isSafari = ( /Safari/i.test( ua ) ),
+        isSafari = ( /Safari/i.test( ua ) && ! /Chrome/i.test( ua ) ),
         safariwin = null;
+    console.log(isSafari);
     // More Buttons
     function image() {
         if(isSafari) { // Safari Hack: open window early, otherwise Safari will block it!
