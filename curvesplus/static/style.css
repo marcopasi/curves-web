@@ -69,8 +69,10 @@ select.ccontrol, select.ccontrol:hover, select.ccontrol:focus {
 
 
 /* Other pages */
+table.parameters th, table.parameters td {vertical-align: top;}
 table.parameters td {padding-left: 30px;}
-
+table.parameters dt {font-weight: normal; text-decoration: underline}
+table.parameters dd {margin-left: 10px; }
 
 /* publication list */
 .volume { font-weight: bold; }

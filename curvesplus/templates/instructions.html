@@ -32,6 +32,12 @@ and 294:148 for the second strand (3’-5’). Note base 1 is paired to base 294
 
 <h3>Other parameters:</h3>
 <table class="parameters">
-<tr><th>3D Viewer:</th><td>Toggle the 3D viewer in the results page</td></tr>
+  <tr><th>3D Viewer:</th><td>Select from the following options the 3D viewer to be used in the results page:
+      <dl>
+	<dt>JSmol:</dt><dd>Full-featured molecular graphics environment using HTML5 canvas. Right-click in the viewer to visualise the feature menu. See also <a href="http://www.jmol.org">http://www.jmol.org/</a>.</dd>
+	<dt>NGL (default):</dt><dd>Fast molecular viewer using WebGL. This viewer is very fast to load and run, and is recommended for large molecules or complexes. See also the NGL <a href="https://github.com/arose/ngl">github</a> page.</dd>
+	<dt>None:</dt><dd>No molecular viewer will be used in the results page: plots and output files will still be available.</dd>
+      </dl>
+  </td></tr>
 </table>
 {% endblock %}
