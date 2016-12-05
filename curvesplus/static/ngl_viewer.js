@@ -21,6 +21,7 @@
  * v0.7		Screenshot button added
  * v0.8		color by nucleotide
  * v0.9		Debugged Safari download with hack (see TODO)
+ * v0.9.1	Refactored color settings
  ****/
 
 /**** TODO
@@ -34,7 +35,31 @@ var AWF = 0.3,                  // radius for Axis
     BWF = 0.3,                  // radius for Backbone
     GWF = 0.3,                  // radius for Grooves
     CWF = 0.3;                  // radius for Curvature vectors
+var Aco = "midnightblue",
+    Bco = "darkred",
+    Cco = Aco,
+    Gcos= ["mediumvioletred","darkorange","pink","silver"],
+    Ncw = "gray",
+    Ncs = "khaki",
+    Nso = 0.5, // opacity
+    Pcc = "steelblue",
+    Pcs = "skyblue",
+    Pso = 0.5; // opacity
 var BGCOLORS =["lightgray","white","black","powderblue"];
+// NDB colors
+var lowsaturation = //RGBYC
+    [0xE6BEBE, 0xBEE6BE, 0xBEBEE6, 0xE6E6AA, 0xBEE6E6];
+var higsaturation = //RGBYC
+    [0xFF7070, 0xA0FFA0, 0xA0A0FF, 0xFFFF70, 0x70FFFF];
+var rgbyc = higsaturation;
+var NDBColors = NGL.ColorMakerRegistry.addSelectionScheme( [ // A red, T blue, C yellow, G green, and U cyan. 
+    [rgbyc[0],"DA or A"],
+    [rgbyc[1],"DG or G"],
+    [rgbyc[2],"DT"],
+    [rgbyc[3],"DC or C"],
+    [rgbyc[4],"U"],
+    ["gray","*"]
+]);
 
 var DEBUG = false;
 
@@ -238,44 +263,33 @@ function more_GUI_extras() {
  *
  */   
 function do_input(comp) {
-    var lowsaturation = //RGBYC
-        [0xE6BEBE, 0xBEE6BE, 0xBEBEE6, 0xE6E6AA, 0xBEE6E6];
-    var higsaturation = //RGBYC
-        [0xFF7070, 0xA0FFA0, 0xA0A0FF, 0xFFFF70, 0x70FFFF];
-    var rgbyc = higsaturation;
-    var NDBColors = NGL.ColorMakerRegistry.addSelectionScheme( [ // A red, T blue, C yellow, G green, and U cyan. 
-        [rgbyc[0],"DA or A"],
-        [rgbyc[1],"DG or G"],
-        [rgbyc[2],"DT"],
-        [rgbyc[3],"DC or C"],
-        [rgbyc[4],"U"],
-        ["gray","*"]
-    ]);
     return {
         // Nucleic
         "Nucleic Acid":
         new RepresentationGroup(comp, "Nucleic Acid", "nucleic")
             .addRepresentation( "Gray",
                                 comp.addRepresentation( "licorice",   {"colorScheme": "uniform",
-                                                                       "colorValue":  "gray"}))
+                                                                       "colorValue":  Ncw}))
             .addRepresentation( "Color",
                                 comp.addRepresentation( "licorice",   {"colorScheme": NDBColors}))
             .addRepresentation( "Ball&Stick",
                                 comp.addRepresentation( "ball+stick", {"colorScheme": "element"}))
             .addRepresentation( "Surface",
-                                comp.addRepresentation( "surface",    {"colorScheme": "uniform",
-                                                                       "colorValue":  "yellow"})),
+                                comp.addRepresentation( "surface",    {"opacity": Nso,
+                                                                       "colorScheme": "uniform",
+                                                                       "colorValue":  Ncs})),
         // Protein
         "Protein":
         new RepresentationGroup(comp, "Protein", "protein")
             .addRepresentation( "Cartoon",
                                 comp.addRepresentation( "cartoon",  {"colorScheme":   "uniform",
-                                                                    "colorValue":    "steelblue"}))
+                                                                    "colorValue":    Pcc}))
             .addRepresentation( "Wire",
                                 comp.addRepresentation( "licorice", {"colorScheme":  "element"}))
             .addRepresentation( "Surface",
-                                comp.addRepresentation( "surface",  {"colorScheme": "uniform",
-                                                                        "colorValue":  "deepskyblue"}))
+                                comp.addRepresentation( "surface",  {"opacity": Pso,
+                                                                     "colorScheme": "uniform",
+                                                                     "colorValue":  Pcs}))
     };
 }
 
@@ -285,7 +299,7 @@ function do_ax(comp) {
         new RepresentationGroup(comp, "Axis", null)
             .addRepresentation( null,
                                comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                    "colorValue":  "blue",
+                                                                    "colorValue":  Aco,
                                                                     "radius":      AWF}))
     };
 }
@@ -296,19 +310,19 @@ function do_bb(comp) {
         new RepresentationGroup(comp, "Backbone", "(:A or :B)")
             .addRepresentation(null,
                                comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                    "colorValue":  "red",
+                                                                    "colorValue":  Bco,
                                                                     "radius":      BWF})),
         "Groove12": 
         new RepresentationGroup(comp, "Groove12", ":C")
             .addRepresentation(null,
                                comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                    "colorValue":  "mediumvioletred",
+                                                                    "colorValue":  Gcos[0],
                                                                     "radius":      GWF})),
         "Groove21": 
         new RepresentationGroup(comp, "Groove21", ":D")
             .addRepresentation(null,
                                comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                    "colorValue":  "orange",
+                                                                    "colorValue":  Gcos[1],
                                                                     "radius":      GWF})),
     };
 }
@@ -319,7 +333,7 @@ function do_cr(comp) {
         new RepresentationGroup(comp, "Curvature", null)
             .addRepresentation(null,
                                comp.addRepresentation( "licorice", {"colorScheme": "uniform",
-                                                                    "colorValue":  "blue",
+                                                                    "colorValue":  Cco,
                                                                     "radius":      CWF}))
     };
 }

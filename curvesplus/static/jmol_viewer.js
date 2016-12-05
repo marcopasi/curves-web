@@ -37,7 +37,7 @@ var nisoc = "yellow translucent";
 var pwf = 0.15; // default wireframe radius for pdb
 var plc  = "steelblue"; // color for lines representation
 var pcc = "deepskyblue"; // color for CPK representation
-var pisoc = "deepskyblue translucent";
+var pisoc = "skyblue translucent";
 // Axis and backbone
 var awf = 0.3; // default wireframe radius for axis
 var bwf = 0.3; // default wireframe radius for backbone
@@ -63,11 +63,11 @@ frame last;isosurface niso resolution 1 solvent 1.4;color isosurface "+nisoc+";\
 frame all;print 'isodone';};"];
 var NDISPNAMES = ["Lines", "Ball & Stick", "Surface"];
 // colors
-var GRVCOLORS=["lawngreen", "orange", "pink", "silver"];
-var BACCOLOR = "red";
-var BGCOLORS =["[0xd4d4d4]","white","black","powderblue"];
-var AXCOLOR = "blue";
-var CRCOLOR = "blue";
+var GRVCOLORS=["mediumvioletred", "darkorange", "pink", "silver"];
+var BACCOLOR = "darkred";
+var BGCOLORS =["lightgray","white","black","powderblue"];
+var AXCOLOR = "midnightblue";
+var CRCOLOR = "midnightblue";
 
 var hasCR = true;
 var hasBB = true;
