@@ -18,7 +18,7 @@ var LOADERIMG="/static/img/curves-loader.gif"; // path to ajax loader image
 var APPWIDTH= "95%";	  // !! modify .jmol width in style definition
 var APPHEIGHT= 400;
 
-var DEBUG = false;
+var DEBUG = true;
 
 /* PDB parsing SETTINGS */
 var BBRES = "BAC";
@@ -32,7 +32,7 @@ var ncwf= 0.15; // default wireframe radius for pdb in CPK
 var nlc  = "gray"; // color for lines representation
 var ncpk= 0.3; // default CPK radius for pdb in CPK
 var nclc = "CPK"; // color for CPK representation
-var nisoc = "yellow translucent";
+var nisoc = "khaki translucent";
 // PDB: protein
 var pwf = 0.15; // default wireframe radius for pdb
 var plc  = "steelblue"; // color for lines representation
@@ -42,25 +42,32 @@ var pisoc = "skyblue translucent";
 var awf = 0.3; // default wireframe radius for axis
 var bwf = 0.3; // default wireframe radius for backbone
 var cwf = 0.3; // default wireframe radius for curvature
+/* Display modes definitions: note that if display mode is list,
+ * all are executed together, but last after 100ms.
+ */
 // Display modes definition: nucleic acid
 var PDISPMODES = [
     "isosurface piso off;wireframe off;cartoon;color "+pcc+";",
     "isosurface piso off;wireframe -"+pwf+";color "+plc+";",
-    "wireframe off;cpk off;cartoon off; \
+    ["print 'isocreate';",
+     "wireframe off;cpk off;cartoon off; \
 if(piso){isosurface piso on;} else {\
-print 'isocreate';piso=on;\
+piso=on;\
 frame last;isosurface piso resolution 1 solvent 1.4;color isosurface "+pisoc+";\
-frame all;print 'isodone';};"];
+frame all;};\
+print 'isodone';"]];
 var PDISPNAMES = ["Cartoon", "Lines", "Surface"];
 // Display modes definition: protein
 var NDISPMODES = [
     "isosurface niso off;wireframe -"+nwf+";color "+nlc+";",
     "isosurface niso off;wireframe -"+ncwf+"; cpk "+ncpk+";color "+nclc+";",
+    ["print 'isocreate';",
     "wireframe off;cpk off; \
 if(niso){isosurface niso on;} else {\
-print 'isocreate';niso=on;\
+niso=on;\
 frame last;isosurface niso resolution 1 solvent 1.4;color isosurface "+nisoc+";\
-frame all;print 'isodone';};"];
+frame all;};\
+print 'isodone';"]];
 var NDISPNAMES = ["Lines", "Ball & Stick", "Surface"];
 // colors
 var GRVCOLORS=["mediumvioletred", "darkorange", "pink", "silver"];
@@ -291,9 +298,19 @@ function _dosh(id, sh, sel, htid, dispmodes, isoname) {	// show/hide pdb part
 	    }
 	
 	document.getElementById("jmolRadioGroup"+htid+"disp_"+checked).checked = true;
-	s += _psh(id, sh, sel)+dispmodes[checked];
+	s += _psh(id, sh, sel);
+        
+        var dispmode = dispmodes[checked];
+        if(typeof(dispmode) == "object") {
+            for(var si=0; si<dispmode.length-1; si++)
+                jmolScriptWait(dispmode[si]);
+            s += dispmode[si];
+        } else {
+            s += dispmode;
+        }
     }
-    return s;
+    // let some time so that preparatory scripts are started
+    return setTimeout(function(){jmolScript(s);}, 100);
 }
 
 //-----
@@ -303,8 +320,7 @@ function _nash(id, sh) {	// show/hide na
     if(!naon) return;
     if(sh == 0) naon=false;
 
-    s = _dosh(id, sh, "nucleic", naid, NDISPMODES, "niso")
-    return jmolScript(s);
+    return _dosh(id, sh, "nucleic", naid, NDISPMODES, "niso")
 }
 
 //-----
@@ -315,8 +331,7 @@ function _prsh(id, sh) {	// show/hide pr
     if(!pron) return;
     if(sh == 0) pron=false;
 
-    s = _dosh(id, sh, "protein", prid, PDISPMODES, "piso")
-    return jmolScript(s);
+    return _dosh(id, sh, "protein", prid, PDISPMODES, "piso")
 }
 
 /* Multi-plex handling */
@@ -387,29 +402,36 @@ function _msg(el,msg) {		// messageCallback function
     if(DEBUG) console.log("JMol: ",msg);
     
     if(msg.indexOf("isocreate") >= 0) { // start creating isosurface
-        if(DEBUG) console.log("Showing surface loader.");
-	document.getElementById("isoload").style.display = "block";
+        _isoshow();
     }else if(msg.indexOf("isodone") >= 0) { // done creating isosurface
-        if(DEBUG) console.log("Hiding surface loader.");
-	document.getElementById("isoload").style.display = "none";
+        _isohide();
     }
     return true;
 }
+//---------------
+function _isoshow() {
+    if(DEBUG) console.log("Showing surface loader.");
+    document.getElementById("isoload").style.display = "block";
+}
+function _isohide() {
+    if(DEBUG) console.log("Hiding surface loader.");
+    document.getElementById("isoload").style.display = "none";
+}
 
 //---------------
-function _shwrap(prep, fun) {
-    if(NDISPNAMES[prep] == "Surface")
-        document.getElementById("isoload").style.display = "block";
+function _shwrap(prep, fun, show) {
+    // if(NDISPNAMES[prep] == "Surface" && show)
+    //     _isoshow()
     setTimeout(fun, 10);
     return true;
 }
 function _nashwrap(id, prep) {
     fun = function(){ _nash(id, 1); };
-    return _shwrap(prep, fun);
+    return _shwrap(prep, fun, naon);
 }
 function _prshwrap(id, prep) {
     fun = function(){ _prsh(id, 1); };
-    return _shwrap(prep, fun);
+    return _shwrap(prep, fun, pron);
 }
 
 function _initPDB(chi) { // initialise dynamically-derived pdb: nucleic acid [and protein]
