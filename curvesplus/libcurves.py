@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 Marco Pasi <mf.pasi@gmail.com> 
+# Copyright (C) 2015-2017 Marco Pasi <mf.pasi@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,17 +19,21 @@ import matplotlib.pyplot as plt
 # 3) LisFile: add options to read header from section
 # 4) Curves: consider having explicitly 3+ series, interrelated:
 #    1. Levels   (integer index of level, first column in all stanzas)
-#    2. Seq  # (1 letter per level), Level direction (second, fourth column of bp_axis)
-#    3. Resn # (1 number per level), Level direction (third, fifth column of bp_axis)
+#    2. Seq  # (1 letter per level), Level direction
+#       (second, fourth column of bp_axis)
+#    3. Resn # (1 number per level), Level direction
+#       (third, fifth column of bp_axis)
 #    Where # indicates there is one series per strand.
 # 5) LisFile: Define more robust parsing of nml entries.
-# 6) Define a "unit" class (Ang, Deg, InvAng, etc) with specified name and symbol
+# 6) Define a "unit" class (Ang, Deg, InvAng, etc) with specified name
+#    and symbol
 
-#----------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
 class FileIntervals(file):
     """
     Raise stopIteration every time a condition is fulfilled.
-    Conditions are expressed in the form of strings, which 
+    Conditions are expressed in the form of strings, which
     must match at the beginning of the line (str.startswith).
     First section is ignored, last section is returned. To
     retain the first section, initialise with an empty string
@@ -39,7 +43,7 @@ class FileIntervals(file):
     when accessing data through iterator methods. The "read"
     methods will work as usual (see file).
     """
-    def __init__(self, conditions, start_deltas = [], *args, **kwargs):
+    def __init__(self, conditions, start_deltas=[], *args, **kwargs):
         super(FileIntervals, self).__init__(*args, **kwargs)
         self.conditions = conditions
         if len(start_deltas) == 0:
@@ -76,19 +80,21 @@ class FileIntervals(file):
             if self._valid >= 0:
                 return line
 
-#----------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------
 class LisFile(FileIntervals):
     """Generic Curves/Canal LisFile class."""
-    
+
     def __init__(self, *args, **kwargs):
         super(LisFile, self).__init__(*args, **kwargs)
-    
+
     def read_section(self, widths, usecols, names, header=0, footer=0):
         """ Read a section of the lis file with uniform fixed-width formatting
         in a pd.DataFrame. """
-        return pd.read_fwf(self, header=None, skiprows=header, skipfooter=footer,
-                            widths = widths, usecols = usecols, names = names,
-                            na_values=["---", "----"])
+        return pd.read_fwf(self, header=None, skiprows=header,
+                           skipfooter=footer, widths=widths,
+                           usecols=usecols, names=names,
+                           na_values=["---", "----"])
 
     def read_nml(self, line, keylen=7, valuelen=32, initspace=2):
         """
@@ -96,69 +102,83 @@ class LisFile(FileIntervals):
 
         Default line type is char, as defined in Curves+ (v2.8).
         Other types are defined as (in Curves+ v2.8):
-        
+
         | Type  | keylen | valuelen |
         |-------+--------+----------|
         | char  | 7      | 32       |
         | int   | 7      | 6        |
         | float | 7      | 6        |
         | bool  | 7      | 6        |
-        
+
         N.B.: Keylen includes ":".
         """
         ret = {}
 
-        def _consume(s,a,b):
+        def _consume(s, a, b):
             return s[b:], s[a:b]
-        
+
         while len(line) > 0:
-            line, key  = _consume(line, initspace, initspace+keylen)
-            line, value= _consume(line, 0, valuelen)
+            line, key = _consume(line, initspace, initspace+keylen)
+            line, value = _consume(line, 0, valuelen)
             key = key.strip()
-            if ret.has_key(key):
-                raise ValueError("NML Error: Duplicate configuration entry {}.".format(key))
+            if key in ret:
+                raise ValueError(
+                    "NML Error: Duplicate configuration entry {}.".format(key))
             ret[key] = value.strip()
         return ret
 
-#----------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------
 class Curves(object):
     """
     """
     section_headers = [
         "",
         "  (A) BP-Axis",
-        "  (B) Intra-BP parameters", 
+        "  (B) Intra-BP parameters",
         "  (C) Inter-BP",
         "  (D) Backbone Parameters",
         "  (E) Groove parameters",
         "  (F) Curvature analysis",
-        "  (I) " ]
+        "  (I) "]
     bp_axis_variables = "xdisp ydisp inclin tip ax-bend".split()
-    intra_bp_variables= "shear stretch stagger buckle propeller opening".split()
-    inter_bp_variables= "shift slide rise tilt roll twist h-rise h-twist".split()
-    backbone_variables= "alpha beta gamma delta epsilon zeta chi phase amplitude pucker".split()
+    intra_bp_variables = """
+    shear stretch stagger
+    buckle propeller opening""".split()
+    inter_bp_variables = """
+    shift slide rise
+    tilt roll twist
+    h-rise h-twist""".split()
+    backbone_variables = """
+    alpha beta gamma delta epsilon zeta chi
+    phase amplitude pucker""".split()
     maxgrooves = 4
-    groove_variables = ["{}{:d}".format(var,num) for num in range(maxgrooves) for var in "width depth".split()]
+    groove_variables = ["{}{:d}".format(var, num)
+                        for num in range(maxgrooves)
+                        for var in "width depth".split()]
     curvature_variables = "curvature radius register".split()
-    curves_variables  = bp_axis_variables + intra_bp_variables + \
-                          inter_bp_variables + backbone_variables + groove_variables + \
-                          curvature_variables
-    ## note that "none" means no unit name will be displayed.
-    units = ("angstrom angstrom degree degree degree " +
-             "angstrom angstrom angstrom degree degree degree " +
-             "angstrom angstrom angstrom degree degree degree angstrom degree " +
-             "degree degree degree degree degree degree degree degree degree degree").split() + \
-            "angstrom angstrom".split()*maxgrooves + \
-            "none angstrom degree".split()
+    curves_variables = bp_axis_variables + intra_bp_variables + \
+        inter_bp_variables + backbone_variables + \
+        groove_variables + curvature_variables
+
+    # note that "none" means no unit name will be displayed.
+    units = (
+        "angstrom angstrom degree degree degree " +
+        "angstrom angstrom angstrom degree degree degree " +
+        "angstrom angstrom angstrom degree degree degree angstrom degree " +
+        "degree degree degree degree degree degree degree degree degree degree"
+    ).split() + \
+        "angstrom angstrom".split()*maxgrooves + \
+        "none angstrom degree".split()
     assert len(units) == len(curves_variables)
 
-    ## plot configuration
+    # plot configuration
     MAX_LEN_SEQ = 20
-    
+
     @classmethod
     def is_variable(cls, var):
         return var in cls.curves_variables
-                              
+
     @classmethod
     def get_unit(cls, var):
         if not cls.is_variable(var):
@@ -167,9 +187,9 @@ class Curves(object):
         if unit == "none":
             unit = ""
         return unit
-    
+
     def __init__(self, filename):
-        self.lisfile = LisFile(name = filename, conditions = self.section_headers)
+        self.lisfile = LisFile(name=filename, conditions=self.section_headers)
         self._parse_lis()
         self.lisfile.close()
 
@@ -184,78 +204,83 @@ class Curves(object):
         self.intra_bp = self._read_intrabp()
         self.inter_bp = self._read_interbp()
         self.backbone = self._read_bckbone()
-        self.groove   = self._read_groove()
-        self.curvature= self._read_curvature()
+        self.groove = self._read_groove()
+        self.curvature = self._read_curvature()
 
     def _read_header(self):
         """
         Read the Lis file header to get run parameters.
-        
+
         These information are contained between two pairs of
         newlines.
         """
         newlines = 0
-        parsing  = False
-        for line in self.lisfile: # first section
-            if len(line.strip()) == 0: # newline
+        parsing = False
+        for line in self.lisfile:  # first section
+            if len(line.strip()) == 0:  # newline
                 newlines += 1
             if newlines == 2:
                 if parsing:
                     break
                 parsing = True
-        
-    def _read_bp_axis(self): 
+
+    def _read_bp_axis(self):
         #   (A) BP-Axis        Xdisp   Ydisp   Inclin    Tip  Ax-bend
         #
         #       write(6,30) i,na(i,1),nu(i,1),na(i,2),nu(i,2),var(1),var(2),
         #      1    var(4),var(5),axang
         # 30        format(2x,i3,') ',a1,i4,'-',a1,i4,2f8.2,2f8.1,a8)
-        widths = (2,3,2,1,4,1,1,4) + (8,)*5
-        usecols= [1,3,4,6,7] + range(8,13)
-        names  = "Entry W Wn C Cn".split() + self.bp_axis_variables
-        return self.lisfile.read_section(widths, usecols, names, header=2, footer=3)
-        
+        widths = (2, 3, 2, 1, 4, 1, 1, 4) + (8, )*5
+        usecols = [1, 3, 4, 6, 7] + range(8, 13)
+        names = "Entry W Wn C Cn".split() + self.bp_axis_variables
+        return self.lisfile.read_section(widths, usecols, names,
+                                         header=2, footer=3)
+
     def _read_intrabp(self):
         #   Strands 1-2       Shear  Stretch Stagger  Buckle  Propel Opening
         #
         #       write(6,10) i,na(i,1),nu(i,1),na(i,2),nu(i,2),(var(j),j=1,6)
         # 10    format(2x,i3,') ',a1,i4,'-',a1,i4,3f8.2,3f8.1,2x,f8.2,f8.1)
-        widths = (2,3,2,1,4,1,1,4) + (8,)*6           # extra fields unkown
-        usecols= [1,3,4,6,7] + range(8,14)
-        names  = "Entry W Wn C Cn".split() + self.intra_bp_variables
-        return self.lisfile.read_section(widths, usecols, names, header=4, footer=3)
-    
+        widths = (2, 3, 2, 1, 4, 1, 1, 4) + (8, )*6    # extra fields unkown
+        usecols = [1, 3, 4, 6, 7] + range(8, 14)
+        names = "Entry W Wn C Cn".split() + self.intra_bp_variables
+        return self.lisfile.read_section(widths, usecols, names,
+                                         header=4, footer=3)
+
     def _read_interbp(self):
         #   (C) Inter-BP       Shift   Slide    Rise    Tilt    Roll   Twist   H-Ris   H-Twi
         #
         #       write(6,20) i-1,na(il,1),nu(il,1),na(iu,1),nu(iu,1),
         #      1 (var(j),j=1,6),vaf(il,1),vaf(il,2)
         # 20    format(2x,i3,') ',a1,i4,'/',a1,i4,3f8.2,3f8.1,f8.2,f8.1)
-        widths = (2,3,2,1,4,1,1,4) + (8,)*8
-        usecols= [1,3,4,6,7] + range(8,16)
-        names  = "Entry L Ln U Un".split() + self.inter_bp_variables
-        return self.lisfile.read_section(widths, usecols, names, header=2, footer=3)
+        widths = (2, 3, 2, 1, 4, 1, 1, 4) + (8, )*8
+        usecols = [1, 3, 4, 6, 7] + range(8, 16)
+        names = "Entry L Ln U Un".split() + self.inter_bp_variables
+        return self.lisfile.read_section(widths, usecols, names,
+                                         header=2, footer=3)
 
     def _read_bckbone(self):
         #    Strand 1     Alpha  Beta   Gamma  Delta  Epsil  Zeta   Chi    Phase  Ampli  Puckr
         #
         #       write(6,26) i,na(i,k),nu(i,k),(tor(m),m=ms,me)
         # 26    format(2x,i3,') ',a1,i4,2x,10a7)
-        widths = (2,3,2,1,4,2) + (7,)*10
-        usecols= [1,3,4] + range(6,16)
-        names  = "Entry L Ln".split() + self.backbone_variables
-        both = self.lisfile.read_section(widths, usecols, names, header=4, footer=1)
+        widths = (2, 3, 2, 1, 4, 2) + (7, )*10
+        usecols = [1, 3, 4] + range(6, 16)
+        names = "Entry L Ln".split() + self.backbone_variables
+        both = self.lisfile.read_section(widths, usecols, names,
+                                         header=4, footer=1)
         return [both[:self.nbp], both[self.nbp+3:]]
-        
+
     def _read_groove(self):
         #   Level           W12     D12     W21     D21
         #
         #       write(6,40) r,string,(stg(kop,m),m=1,2*nst)
         # 40    format(2x,f5.1,a7,8(2x,a6))
-        widths = (2,5,2,1,4) + (8,)*8
-        usecols= [1,3,4] + range(5,13)
-        names  = "N L Ln".split() + self.groove_variables
-        return self.lisfile.read_section(widths, usecols, names, header=4, footer=0)
+        widths = (2, 5, 2, 1, 4) + (8, )*8
+        usecols = [1, 3, 4] + range(5, 13)
+        names = "N L Ln".split() + self.groove_variables
+        return self.lisfile.read_section(widths, usecols, names,
+                                         header=4, footer=0)
 
     def _read_curvature(self):
         #    N    BP step        Cur      Rad      Reg
@@ -264,14 +289,16 @@ class Curves(object):
         #       write(6,15) i2,na(i2,1),nu(i2,1),na(i3,1),nu(i3,1),curv,
         #      1 rho,reg*crd
         # 15    format(2x,i3,') ',a1,i4,'/',a1,i4,2x,3f9.3)
-        widths = (2,3,2,1,4,1,1,4,2) + (9,)*3
-        usecols= [1,3,4,6,7] + range(9,12)
-        names  = "Entry L Ln U Un".split() + self.curvature_variables
-        return self.lisfile.read_section(widths, usecols, names, header=4, footer=2)
+        widths = (2, 3, 2, 1, 4, 1, 1, 4, 2) + (9, )*3
+        usecols = [1, 3, 4, 6, 7] + range(9, 12)
+        names = "Entry L Ln U Un".split() + self.curvature_variables
+        return self.lisfile.read_section(widths, usecols, names,
+                                         header=4, footer=2)
 
     def normalize_interval(self, interval=None):
         """Return a valid interval for this DNA molecule."""
-        # XXX TODO: circular molecules have one more entry for inter,backbone,groove,curvature
+        # XXX TODO: circular molecules have one more entry for:
+        #     inter, backbone, groove, curvature
         if interval is None:
             interval = [0, self.nbp]
         start, end = interval[:]
@@ -287,12 +314,15 @@ class Curves(object):
         return start, end
 
     def get_variable(self, varname, interval=None, step=1):
-        """Return the Series corresponding to an interval of the specified variable"""
+        """
+        Return the Series corresponding to an interval of the specified
+        variable.
+        """
         if not self.is_variable(varname):
             raise ValueError("Variable '{}' not recognised.".format(varname))
 
         start, end = self.normalize_interval(interval)
-        
+
         if varname in self.bp_axis_variables:
             y = self.bp_axis[varname]
             x = self.bp_axis.Wn
@@ -319,6 +349,7 @@ class Curves(object):
     @property
     def sequence(self):
         return pd.Series(self.bp_axis.W.values, index=self.bp_axis.Wn)
+
     @sequence.setter
     def sequence(self, sequence):
         raise NotImplementedError
@@ -331,23 +362,26 @@ class Curves(object):
         # if start is not None and start < 1:
         #     raise ValueError("Interval start <%d> not valid."%start)
         # if end is not None and end > dna.nbp:
-        #     raise ValueError("Interval end <%d> not valid (%d bp)."%(end, self.nbp))
+        #     raise ValueError(
+        #         "Interval end <{}> not valid ({} bp).".format(end, self.nbp))
         start, end = self.normalize_interval(interval)
-        
-        y, x   = self.get_variable(varname, interval = interval)
+
+        y, x = self.get_variable(varname, interval=interval)
         if not hold:
             plt.clf()
         # plot inter and backbone variables at junctions
         dx = 0.0
-        if varname in self.inter_bp_variables or varname in self.backbone_variables:
+        if varname in self.inter_bp_variables or \
+           varname in self.backbone_variables:
             dx = 0.5
         if xtransform:
-            x=x.apply(xtransform)
+            x = x.apply(xtransform)
         if ytransform:
-            y=y.apply(ytransform)
+            y = y.apply(ytransform)
         plot = plt.plot(x.values+dx, y.values, **kwargs)
         if dx > 0:
-            # TODO: instead of extrapolating, get next value from bp_axis or intra_bp
+            # TODO: instead of extrapolating, get next value from
+            #       bp_axis or intra_bp
             nx = len(x)
             nextx = 2*x.iloc[nx-1]-x.iloc[nx-2]
             if nextx in self.bp_axis.Wn.values:
@@ -356,7 +390,8 @@ class Curves(object):
         if varname in self.groove_variables:
             I = x.apply(lambda x: x == round(x))
             x = x[I]
-            # XXX temporarily pad I with False to account for circular molecules
+            # XXX temporarily pad I with False to account for
+            #     circular molecules
             I = pad(I, (0, self.groove.Ln.shape[0] - I.shape[0]),
                     'constant', constant_values=False)
             xnames = self.groove.Ln[I].values
@@ -374,10 +409,12 @@ class Curves(object):
             ylabel += " ({})".format(unit)
         plt.ylabel(ylabel)
         return plot
-                    
+
+
 def main():
-    c=Curves("/tmp/CCBD.out.lis")
+    c = Curves("/tmp/CCBD.out.lis")
     print c.backbone[1]
 
 # ------------------------------------------
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
