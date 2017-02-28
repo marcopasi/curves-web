@@ -32,10 +32,31 @@ app.config['UPLOADED_PDBFILES_DEST'] = app.static_folder
 configure_uploads(app, (pdbfiles,))
 
 # --- Local imports: require `app` to be defined
-from .util import download_pdb
+from .util import set_umask, download_pdb
 from .forms import CurvesForm
 from .curvesrun import WebCurvesConfiguration, DummyCurvesRun, \
     SubprocessCurvesRun
+
+# --- Umask definition
+# Use util.set_umask to change both os.umask and the umask
+# of tempfiles created using util.mkstemp and util.mkdtemp.
+# This may be useful when the web application is run
+# by a user who is not www-data.
+#
+# Note 1: All new files respect os.umask except tempfile.*
+# Note 2: shutil.copy preserves permissions
+# Note 3:
+#  1) the temporary input PDB file is created either:
+#     - in util.py (download_pdb) using util.mkstemp
+#     - here, further down (pdbfiles.save)
+#  2) the temporary folder is created in curvesrun.py
+#     SubprocessCurvesRun.__init__ uses util.mkdtemp
+#  3) the input PDB is copied locally in curvesrun.py
+#     CurvesRun.__init__ uses shutil.copy
+#  4) png files are created here (plot) using pyplot.savefig
+#  5) zip file is created here (makezip) using zipfile
+#
+set_umask(0027)
 
 # --- Uncomment for full Debug
 # from flask_debugtoolbar import DebugToolbarExtension

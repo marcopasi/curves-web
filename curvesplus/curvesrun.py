@@ -11,9 +11,9 @@ CurvesRun: Configure and run Curves+.
 import re
 import os
 from shutil import copy as shell_copy
-import tempfile
 
 from . import app
+from .util import mkdtemp
 
 
 # ---
@@ -253,7 +253,7 @@ class SubprocessCurvesRun(CurvesRun):
     def __init__(self, config, infile, **kwargs):
         libbase = os.path.join(app.config["CURVESPLUS_HOME"], "standard")
         exefile = app.config["CURVESPLUS_EXE"]
-        outdir = tempfile.mkdtemp(dir=app.static_folder)
+        outdir = mkdtemp(dir=app.static_folder)
         urlbase = outdir[outdir.find('static'):]
         super(SubprocessCurvesRun, self).__init__(
             outdir=outdir, config=config, libbase=libbase,
